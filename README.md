@@ -180,3 +180,17 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
   generic + spec-aware with sensible fnol defaults; a real project edits them. A test case's
   `evaluators[]` name resolves to a rubric (`tests/rubrics/<name>.rubric.json`) if one exists,
   else a Python evaluator (`tests/evaluators/<name>.py`).
+
+---
+
+## Further reading
+
+- [`docs/testing-from-scripts.md`](docs/testing-from-scripts.md) — the bring-your-own-script testing path in depth (file shapes, the run loop, mock dispatch).
+- [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — authoring agent prompts test-first.
+- [`prompts/GOLD-EXTRACTION-PROMPT.txt`](prompts/GOLD-EXTRACTION-PROMPT.txt) — the LLM prompt that turns source material (transcripts, scripts, docs) into `tests/gold/*.gold.json` records.
+
+**New to flowstore?** It's a behavioral spec format for conversational agents — a graph of *flows* connected by *exit paths*, decomposed into per-concern files in a Git repo (what you see here). The authoritative spec data model lives in `SCHEMA.md` and the on-disk layout in `FILE-MODEL.md`, both in the **flowstore** repo; this project is a worked instance of both.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
