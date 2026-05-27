@@ -18,8 +18,8 @@
     {
       "user_input": "Just put me through to a real person, please.",
       "expected_class": "human",
-      "must_contain": ["agent"],
-      "notes": "wants a person -> xp_pnf_human, fires cap_transfer_to_human."
+      "must_not_contain": ["claim NW", "try the number again"],
+      "notes": "wants a person -> xp_pnf_human fires cap_transfer_to_human. The transfer can be a silent tool call with no narration, so we assert the agent did NOT keep looping on the number or fabricate a claim, rather than a specific phrase; a native runner verifies the capability call itself."
     },
     {
       "user_input": "You know what, forget it, I'll call back later.",
