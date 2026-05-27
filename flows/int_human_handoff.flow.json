@@ -1,0 +1,24 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "int_human_handoff",
+  "version": "0.1.0",
+  "name": "Interrupt — talk to a person",
+  "type": "interrupt",
+  "instructions": "The caller wants a human. Don't argue, don't probe — just acknowledge and transfer. Fire cap_transfer_to_human and end. The customer continues with the human agent; we're done.",
+  "entry_condition": {
+    "expression": "Caller says they'd like to speak with a person, is frustrated, asks to talk to someone real, or says the bot isn't helping.",
+    "method": "llm"
+  },
+  "scripts": [
+    { "id": "ihh_s1" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_ihh_transfer",
+      "actions": [
+        { "capability_id": "cap_transfer_to_human" }
+      ],
+      "goto": "END"
+    }
+  ]
+}

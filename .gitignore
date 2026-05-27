@@ -1,0 +1,34 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.Python
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Node (if a JS toolchain is added) ---
+node_modules/
+
+# --- Secrets / local config ---
+.env
+.env.*
+!.env.example
+
+# --- flowstore: compiled artifacts + ephemeral run outputs ---
+dist/
+tests/runs/
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

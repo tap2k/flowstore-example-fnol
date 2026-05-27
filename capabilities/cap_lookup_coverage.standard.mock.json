@@ -1,0 +1,12 @@
+{
+  "$schema": "flowstore://test/mock/v0",
+  "capability_id": "cap_lookup_coverage",
+  "variant": "standard",
+  "description": "Generic coverage summary for a standard auto policy. Grounds the policy-question interrupt's answers without quoting per-policy dollar amounts.",
+  "behavior": {
+    "kind": "static",
+    "returns": {
+      "coverage_summary": "Standard auto policy: collision + comprehensive, roadside/towing included, rental coverage included up to the policy daily limit. Per-policy deductible amounts are not disclosed on this line."
+    }
+  }
+}

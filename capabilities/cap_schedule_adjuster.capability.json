@@ -1,0 +1,9 @@
+{
+  "$schema": "flowstore://spec/capability/v0",
+  "id": "cap_schedule_adjuster",
+  "name": "schedule_adjuster",
+  "description": "Book the adjuster callback for the filed claim. Side-effect only.",
+  "kind": "function",
+  "inputs": ["claim_id", "callback_number", "callback_window"],
+  "outputs": []
+}

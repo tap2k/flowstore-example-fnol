@@ -1,0 +1,23 @@
+{
+  "$schema": "flowstore://test/case/v0",
+  "id": "coverage-question-interrupt",
+  "name": "Caller asks a coverage question mid-intake (policy-question interrupt)",
+  "description": "Triggers int_policy_question: the caller asks about rental coverage during intake. The agent answers generically from the FAQ, defers per-policy specifics and any premium impact to the adjuster, then returns to the claim. NOTE: retrieve_on_turn (cap_lookup_coverage) is a runtime behavior — it fires under a native runner, not under this prompt-target harness, so the answer here comes from the FAQ alone.",
+  "user_turns": [
+    "I'm fine, somewhere safe.",
+    "Casey Lin, policy three oh nine eight eight one two.",
+    "Yes. Quick question before we go on — will my insurance cover a rental while the car's in the shop?",
+    "Got it. And will this make my premium go up?",
+    "Okay, let's keep going with the claim."
+  ],
+  "mock_bindings": {
+    "cap_verify_policy": "active"
+  },
+  "transcript_assertions": [
+    { "kind": "substring", "pattern": "adjuster", "must_appear": true }
+  ],
+  "evaluators": ["no_premium_speculation", "empathy_maintained"],
+  "model": "gemini-2.5-flash",
+  "language": "en-US",
+  "tags": ["interrupt", "coverage", "no-speculation"]
+}

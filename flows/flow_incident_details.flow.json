@@ -1,0 +1,33 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_incident_details",
+  "version": "0.1.0",
+  "name": "Incident details",
+  "type": "happy",
+  "instructions": "Get the basics of what happened: when, where, a brief description, the caller's fault assessment, and whether police were involved. Let the caller volunteer info in any order — don't drill on specifics they don't mention. Capture 'incident_when' (free-form date/time as they describe it), 'incident_location' (address, intersection, or landmark), 'incident_description' (one or two sentences), 'fault_assessment' (self / other / shared / unclear — capture only what they volunteer, NEVER tell them what you think), 'police_report_filed' (boolean), and if filed, 'police_report_number'. The claim-types reference can help you recognize what kind of incident this is, but never quote a coverage decision — that's the adjuster's call. Keep your follow-ups short. If they're not sure about fault, mark 'unclear' and move on — that's expected.",
+  "scripts": [
+    { "id": "in_s1" },
+    { "id": "in_s2" },
+    { "id": "in_s3" },
+    { "id": "in_s4" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_in_offtopic",
+      "condition": {
+        "expression": "Caller has gone off on a tangent unrelated to this accident — asking about other Northwind products, an unrelated policy change, or general chit-chat that isn't about what happened.",
+        "method": "llm"
+      },
+      "notes": "Routes to the off-topic handler, a callable flow (goto RETURN) — distinct from the global interrupts. Reached only from this flow, the most open-ended point in intake, where callers most often wander.",
+      "goto": "flow_off_topic"
+    },
+    {
+      "id": "xp_in_to_vehicle",
+      "condition": {
+        "expression": "Caller has shared when, where, what happened, their own sense of fault (or that they're unsure), and whether the police were involved.",
+        "method": "llm"
+      },
+      "goto": "flow_vehicle_info"
+    }
+  ]
+}

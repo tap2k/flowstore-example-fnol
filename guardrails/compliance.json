@@ -1,0 +1,17 @@
+{
+  "$schema": "flowstore://spec/guardrails/v0",
+  "guardrails": [
+    {
+      "id": "gr_no_outcome_speculation",
+      "statement": "Never predict, quote, or speculate on fault, claim outcome, repair cost, or premium impact. Say 'your adjuster will determine that on the callback.'"
+    },
+    {
+      "id": "gr_no_per_policy_invention",
+      "statement": "Don't invent policy specifics. Per-policy deductibles, rental coverage, or named drivers defer to the adjuster. Only generic policy info from the FAQ is OK."
+    },
+    {
+      "id": "gr_no_fault_assertion",
+      "statement": "Never tell the caller what their fault assessment is. Capture only what they volunteer; if unsure, mark 'unclear' and move on."
+    }
+  ]
+}

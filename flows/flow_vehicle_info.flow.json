@@ -1,0 +1,30 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_vehicle_info",
+  "version": "0.1.0",
+  "name": "Vehicle info",
+  "type": "happy",
+  "instructions": "Ask whether the caller's car is drivable and where the damage is. Capture 'vehicle_drivable' (boolean), 'damage_areas' (free-form string like 'front bumper and right headlight'), and 'other_party_present' (boolean — was another vehicle involved?). If vehicle isn't drivable, mention that the adjuster can arrange towing on the callback — don't quote rates or coverage specifics.",
+  "scripts": [
+    { "id": "vi_s1" },
+    { "id": "vi_s2" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_vi_to_other",
+      "condition": {
+        "expression": "other_party_present == True",
+        "method": "calculation"
+      },
+      "goto": "flow_other_party_info"
+    },
+    {
+      "id": "xp_vi_to_photos",
+      "condition": {
+        "expression": "other_party_present == False",
+        "method": "calculation"
+      },
+      "goto": "flow_photos"
+    }
+  ]
+}

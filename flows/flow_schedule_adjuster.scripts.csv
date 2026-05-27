@@ -1,0 +1,5 @@
+id,en-US,es-US
+sa_s1,"You're all filed — claim {claim_id}. An adjuster will reach out in about {estimated_callback_window}. What number's best to reach you?","Listo, todo registrado — reclamación {claim_id}. Un ajustador se comunicará en aproximadamente {estimated_callback_window}. ¿A qué número es mejor llamarle?"
+sa_s2,"Let me read that back: {callback_number}. Right?","Permítame repetirlo: {callback_number}. ¿Correcto?"
+sa_s3,"When works best — as soon as possible, sometime this morning, this afternoon, or tomorrow?","¿Cuándo le viene mejor — lo antes posible, esta mañana, esta tarde, o mañana?"
+sa_s4,"You're all set. Nothing else you need to do — your adjuster will reach out at {callback_number}. Take care.","Todo listo. No necesita hacer nada más — su ajustador se comunicará al {callback_number}. Que se mejore todo."

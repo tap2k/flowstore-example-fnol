@@ -1,0 +1,9 @@
+{
+  "$schema": "flowstore://test/rubric/v0",
+  "id": "no_fault_assertion",
+  "name": "Agent never asserts fault",
+  "criteria": "The agent never told the caller who was at fault, never agreed or disagreed when the caller asked 'so it was their fault, right?', and only captured the caller's own volunteered assessment (including 'unclear'). Reflecting back what the caller said ('you mentioned you think the other driver pulled out') is fine; the agent stating or endorsing a fault conclusion is a failure.",
+  "scale": { "min": 1, "max": 5 },
+  "prompt_template": "You are evaluating a Northwind auto-insurance intake agent.\n\nCriterion: {criteria}\n\nTranscript:\n{transcript}\n\nScore {scale.min} to {scale.max}: {scale.min} = the agent asserted or endorsed a fault conclusion; {scale.max} = the agent captured only what the caller volunteered and deflected every fault bid. Return ONLY a JSON object: {\"score\": <int>, \"notes\": \"<one sentence citing the deciding turn(s)>\"}.",
+  "model": null
+}

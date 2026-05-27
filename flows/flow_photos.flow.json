@@ -1,0 +1,21 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_photos",
+  "version": "0.1.0",
+  "name": "Photos commitment",
+  "type": "happy",
+  "instructions": "Ask if the caller can send photos of the damage and the scene. Mention you'll text them a link after filing. Capture 'photos_promised' (boolean). Don't push if they decline.",
+  "scripts": [
+    { "id": "ph_s1" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_ph_to_review",
+      "condition": {
+        "expression": "Caller has answered whether they'll send photos.",
+        "method": "llm"
+      },
+      "goto": "flow_review_and_file"
+    }
+  ]
+}

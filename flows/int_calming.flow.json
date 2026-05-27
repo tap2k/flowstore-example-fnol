@@ -1,0 +1,37 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "int_calming",
+  "version": "0.1.0",
+  "name": "Interrupt — calm the caller",
+  "type": "interrupt",
+  "instructions": "The caller is upset, panicking, crying, swearing in distress, or says they're overwhelmed. Acknowledge briefly and check safety — one or two sentences, no upsell, no rushing. If they want a person, transfer. Otherwise return to whatever flow was interrupted when they're ready.",
+  "entry_condition": {
+    "expression": "Caller is audibly upset, panicking, crying, swearing in distress, or says they're shaken or overwhelmed.",
+    "method": "llm"
+  },
+  "scripts": [
+    { "id": "ic_s1" },
+    { "id": "ic_s2" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_ic_return",
+      "condition": {
+        "expression": "Caller has indicated they're ready to continue.",
+        "method": "llm"
+      },
+      "goto": "RETURN"
+    },
+    {
+      "id": "xp_ic_human",
+      "condition": {
+        "expression": "Caller wants to speak with a person.",
+        "method": "llm"
+      },
+      "actions": [
+        { "capability_id": "cap_transfer_to_human" }
+      ],
+      "goto": "END"
+    }
+  ]
+}

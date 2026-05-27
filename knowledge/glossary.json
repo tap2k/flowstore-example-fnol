@@ -1,0 +1,35 @@
+{
+  "$schema": "flowstore://spec/project-glossary/v0",
+  "glossary": [
+    {
+      "id": "gloss_fnol",
+      "term": "FNOL",
+      "definition": "First Notice of Loss — the initial report that an incident occurred."
+    },
+    {
+      "id": "gloss_deductible",
+      "term": "Deductible",
+      "definition": "The amount the policyholder pays out of pocket before insurance covers the rest."
+    },
+    {
+      "id": "gloss_third_party",
+      "term": "Third party",
+      "definition": "Anyone other than the policyholder and Northwind involved in the incident."
+    },
+    {
+      "id": "gloss_subrogation",
+      "term": "Subrogation",
+      "definition": "How Northwind recovers costs from the at-fault party's insurer after paying a claim."
+    },
+    {
+      "id": "gloss_comprehensive",
+      "term": "Comprehensive",
+      "definition": "Coverage for non-collision damage (theft, weather, vandalism)."
+    },
+    {
+      "id": "gloss_collision",
+      "term": "Collision",
+      "definition": "Coverage for damage from a collision, regardless of fault."
+    }
+  ]
+}

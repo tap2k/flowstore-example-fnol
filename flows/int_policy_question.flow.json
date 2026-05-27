@@ -1,0 +1,49 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "int_policy_question",
+  "version": "0.1.0",
+  "name": "Interrupt — policy / coverage question",
+  "type": "interrupt",
+  "instructions": "The caller asked a generic policy or coverage question. Answer from the FAQ and the retrieved coverage summary above. For premium-impact questions specifically: DO NOT speculate — say the call itself doesn't change anything and the adjuster will discuss it. Per-policy specifics (your exact deductible, your rental limit) defer to the adjuster — never read a dollar figure off the coverage summary. After answering, ask if they want to keep going with the claim and return.",
+  "entry_condition": {
+    "expression": "Caller asks a generic policy or coverage question — deductibles, rental coverage, choice of repair shop, premium impact, towing coverage, or what FNOL means.",
+    "method": "llm"
+  },
+  "retrieve_on_turn": ["cap_lookup_coverage"],
+  "knowledge": {
+    "faq": [
+      {
+        "id": "faq_ipq_why_adjuster",
+        "question": "Why can't you just tell me my exact deductible now?",
+        "answer": {
+          "en-US": "I want to make sure you get the right number for your specific policy, and that's the adjuster's call — they'll confirm it on the callback so nothing's a surprise.",
+          "es-US": "Quiero asegurarme de que reciba la cifra correcta para su póliza específica, y eso lo determina el ajustador — se lo confirmará en la llamada de seguimiento para que no haya sorpresas."
+        }
+      }
+    ]
+  },
+  "scripts": [
+    { "id": "ipq_s1" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_ipq_return",
+      "condition": {
+        "expression": "Caller has heard the answer and is ready to continue.",
+        "method": "llm"
+      },
+      "goto": "RETURN"
+    },
+    {
+      "id": "xp_ipq_human",
+      "condition": {
+        "expression": "Caller wants to speak with a person.",
+        "method": "llm"
+      },
+      "actions": [
+        { "capability_id": "cap_transfer_to_human" }
+      ],
+      "goto": "END"
+    }
+  ]
+}

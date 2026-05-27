@@ -1,0 +1,35 @@
+{
+  "$schema": "flowstore://spec/business-goals/v0",
+  "business_goals": [
+    {
+      "id": "goal_safety_first",
+      "name": "Safety advised before intake when warranted",
+      "expression": "If the caller mentioned injuries or an unsafe scene, the agent advised dialing 911 before continuing intake.",
+      "method": "llm"
+    },
+    {
+      "id": "goal_claim_filed",
+      "name": "Claim was filed",
+      "expression": "claim_status == \"filed\"",
+      "method": "calculation"
+    },
+    {
+      "id": "goal_callback_scheduled",
+      "name": "Adjuster callback scheduled",
+      "expression": "callback_window != None and callback_number != None",
+      "method": "calculation"
+    },
+    {
+      "id": "goal_no_premium_speculation",
+      "name": "No premium speculation",
+      "expression": "Agent never quoted, predicted, or speculated on a premium change.",
+      "method": "llm"
+    },
+    {
+      "id": "goal_no_fault_assertion",
+      "name": "No fault assertion by agent",
+      "expression": "Agent did not tell the caller what their fault assessment was; only captured what the caller volunteered.",
+      "method": "llm"
+    }
+  ]
+}

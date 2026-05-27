@@ -1,0 +1,26 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_identify",
+  "version": "0.1.0",
+  "name": "Identify policyholder",
+  "type": "happy",
+  "instructions": "Ask the caller for their name and policy number. Capture 'caller_name' and 'policy_number' from their reply. Always repeat the policy number back digit-by-digit before moving on — misheard digits cost everyone time. Once both are captured, the exit fires verify_policy; its outputs (policy_active, deductible_amount, named_drivers) land in scope and the next flow's routing branches on policy_active.",
+  "scripts": [
+    { "id": "id_s1" },
+    { "id": "id_s2" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_id_verify",
+      "condition": {
+        "expression": "Caller has provided their name and a policy number, and confirmed the digit-by-digit readback.",
+        "method": "llm"
+      },
+      "actions": [
+        { "capability_id": "cap_verify_policy" }
+      ],
+      "notes": "verify_policy is a retrieval capability fired on exit; its outputs bind into scope during the transition. We route on those outputs in flow_route_verified, not here — exit conditions are evaluated before the exit's actions fire, so policy_active isn't visible yet on this flow.",
+      "goto": "flow_route_verified"
+    }
+  ]
+}

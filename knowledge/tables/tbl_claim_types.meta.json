@@ -1,0 +1,29 @@
+{
+  "$schema": "flowstore://spec/knowledge-table/v0",
+  "id": "tbl_claim_types",
+  "name": "Auto claim types",
+  "purpose": "Reference for the kinds of auto claims Northwind handles and which coverage they fall under. Helps the agent recognize the incident type while gathering details — it never quotes coverage decisions, which are the adjuster's call.",
+  "structure": [
+    {
+      "field": "claim_type",
+      "description": "Short identifier for the incident category.",
+      "type": "string"
+    },
+    {
+      "field": "coverage",
+      "description": "Which coverage the claim typically falls under.",
+      "type": "string"
+    },
+    {
+      "field": "description",
+      "description": "Plain-language description used to recognize the incident type.",
+      "type": "string"
+    },
+    {
+      "field": "typical_callback_window",
+      "description": "Rough adjuster callback window for this claim type (non-binding; the filed claim returns the real window).",
+      "type": "string"
+    }
+  ],
+  "scaling_rule": "These windows are typical, not guarantees. Never quote them as a promise — the filed claim's estimated_callback_window is the figure the agent states to the caller."
+}

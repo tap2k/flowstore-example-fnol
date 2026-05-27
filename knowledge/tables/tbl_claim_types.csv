@@ -1,0 +1,7 @@
+claim_type,coverage,description,typical_callback_window
+collision_multi_vehicle,collision,"Two or more vehicles involved in a crash.",2 hours
+collision_single_vehicle,collision,"Hit a fixed object — pole, guardrail, curb, or wall.",2 hours
+theft,comprehensive,"Vehicle or its contents stolen.",next business day
+weather,comprehensive,"Hail, flood, fallen tree, or other storm damage.",next business day
+vandalism,comprehensive,"Keying, broken windows, or other deliberate damage.",next business day
+glass_only,comprehensive,"Windshield or window glass only, no other damage.",same day

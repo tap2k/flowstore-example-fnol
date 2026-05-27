@@ -1,0 +1,50 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_review_and_file",
+  "version": "0.1.0",
+  "name": "Review & file claim",
+  "type": "happy",
+  "instructions": "Recap the intake concisely in one short paragraph: when, where, brief description, the caller's fault assessment, vehicle status, other-party summary, photos commitment. Skip empty or 'unclear' fields naturally — say 'no other party' rather than 'other_party: none'. Ask 'Does that all sound right?' and wait for an explicit yes/no. If the caller wants to amend a slot ('it was on Main, not Maple'), update the slot in place and re-recap — stay in this flow, don't transition. On confirm, fire cap_file_claim; its outputs (claim_id, estimated_callback_window) land in scope and flow_schedule_adjuster references them.",
+  "example": "Quinn: Let me read this back — yesterday around 6pm, the intersection of 5th and Main, a car rear-ended you at a light. Front bumper damage, car's still drivable, no injuries, you've got the other driver's info, and you'll send photos. Does that all sound right?\nCaller: Yes, that's right.\nQuinn: Filing the claim now — give me one second. (fires cap_file_claim) You're all filed — claim NW-2026-018472.",
+  "scripts": [
+    { "id": "rf_s1" },
+    { "id": "rf_s2" },
+    { "id": "rf_s3" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_rf_confirm",
+      "condition": {
+        "expression": "Caller has confirmed the recap is correct.",
+        "method": "llm"
+      },
+      "assigns": {
+        "claim_status": {
+          "method": "direct",
+          "value": "filed"
+        }
+      },
+      "actions": [
+        { "capability_id": "cap_file_claim" }
+      ],
+      "goto": "flow_schedule_adjuster"
+    },
+    {
+      "id": "xp_rf_cancel",
+      "condition": {
+        "expression": "Caller has asked to cancel or no longer wants to file the claim.",
+        "method": "llm"
+      },
+      "assigns": {
+        "claim_status": {
+          "method": "direct",
+          "value": "cancelled"
+        }
+      },
+      "actions": [
+        { "capability_id": "cap_log_no_file" }
+      ],
+      "goto": "END"
+    }
+  ]
+}

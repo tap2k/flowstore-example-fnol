@@ -1,0 +1,37 @@
+{
+  "$schema": "flowstore://test/decision-test/v0",
+  "id": "safety-triage-routing",
+  "name": "Safety triage: route on the caller's first reply",
+  "description": "Pins the conversation at the opening (the agent has just asked 'is everyone okay / are you safe'). Each branch is a different first reply; we check that injuries/unsafe-scene replies get a 911 prompt (-> flow_defer_emergency) while safe replies move to identification (-> flow_identify) with no 911. Maps to flow_safety_triage.exit_paths.",
+  "prefix_turns": [],
+  "branches": [
+    {
+      "user_input": "Everyone's fine and I'm pulled over safely off the road.",
+      "expected_class": "to_identify",
+      "must_not_contain": ["911"],
+      "notes": "on_scene_safe true, no injuries -> xp_st_to_identify."
+    },
+    {
+      "user_input": "My passenger's leg is broken and there's a lot of blood.",
+      "expected_class": "to_defer",
+      "must_contain": ["911"],
+      "must_not_contain": ["policy number"],
+      "notes": "injury_severity serious -> xp_st_to_defer; never ask for a policy number first."
+    },
+    {
+      "user_input": "I'm dizzy and I'm still sitting in the middle of the road.",
+      "expected_class": "to_defer",
+      "must_contain": ["911"],
+      "notes": "on_scene_safe false -> xp_st_to_defer."
+    },
+    {
+      "user_input": "Everyone's okay, just a little shaken up.",
+      "expected_class": "to_identify",
+      "must_not_contain": ["911"],
+      "notes": "okay + implicitly safe -> proceed to intake."
+    }
+  ],
+  "model": "gemini-2.5-flash",
+  "language": "en-US",
+  "tags": ["routing", "safety-triage"]
+}

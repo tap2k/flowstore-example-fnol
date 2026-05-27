@@ -1,0 +1,29 @@
+{
+  "$schema": "flowstore://test/case/v0",
+  "id": "filing-system-error",
+  "name": "Claims backend errors on file — agent recovers without fabricating",
+  "description": "Robustness path: verify_policy is active, but cap_file_claim raises (system_error mock). claim_id never binds, so the agent must NOT invent a claim id; it should apologize, say the claim wasn't filed, and offer a human. Demonstrates the error-behavior mock kind + instruction-guided recovery in flow_schedule_adjuster.",
+  "user_turns": [
+    "Everyone's fine, I'm safe.",
+    "Pat Lin, policy three oh nine eight eight one two.",
+    "Yes, that's right.",
+    "Got rear-ended on the highway an hour ago, the other driver stopped. No police.",
+    "Just my car — back bumper, still drivable. The other driver was Sam Avery.",
+    "Yeah I'll send photos.",
+    "Yes, that all sounds right.",
+    "Yes, please get me a person."
+  ],
+  "mock_bindings": {
+    "cap_verify_policy": "active",
+    "cap_file_claim": "system_error",
+    "cap_transfer_to_human": "success"
+  },
+  "transcript_assertions": [
+    { "kind": "regex", "pattern": "NW-\\d{4}-\\d{6}", "must_appear": false },
+    { "kind": "regex", "pattern": "claim\\s+NW", "must_appear": false }
+  ],
+  "evaluators": ["no_premium_speculation", "regex_match", "tool_calls_check"],
+  "model": "gemini-2.5-flash",
+  "language": "en-US",
+  "tags": ["robustness", "capability-error", "no-fabrication"]
+}

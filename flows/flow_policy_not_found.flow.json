@@ -1,0 +1,59 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_policy_not_found",
+  "version": "0.1.0",
+  "name": "Policy not found",
+  "type": "sad",
+  "instructions": "Apologize without blaming the caller — the verification didn't go through. Ask if they'd like to double-check the policy number. Capture an updated 'policy_number' if they have one. Don't loop more than once: if 'policy_retry_attempted' is already True, escalate to a human. If the caller wants a person or wants to give up, route accordingly.",
+  "scripts": [
+    { "id": "pnf_s1" },
+    { "id": "pnf_s2" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_pnf_retry",
+      "condition": {
+        "expression": "Caller has offered a corrected policy number and we have not already retried once.",
+        "method": "llm"
+      },
+      "assigns": {
+        "policy_retry_attempted": {
+          "method": "direct",
+          "value": true
+        }
+      },
+      "goto": "flow_identify"
+    },
+    {
+      "id": "xp_pnf_human",
+      "condition": {
+        "expression": "Caller wants to speak with a person, or has already retried verification once.",
+        "method": "llm"
+      },
+      "actions": [
+        { "capability_id": "cap_transfer_to_human" }
+      ],
+      "goto": "END"
+    },
+    {
+      "id": "xp_pnf_giveup",
+      "condition": {
+        "expression": "Caller wants to give up, call back later, or end the conversation.",
+        "method": "llm"
+      },
+      "actions": [
+        { "capability_id": "cap_log_no_file" }
+      ],
+      "goto": "END"
+    },
+    {
+      "id": "xp_pnf_budget",
+      "max_turns": 3,
+      "notes": "Turn-budget backstop (SCHEMA.md § exit_paths[].max_turns). If verification keeps failing and none of the conditional exits fire within 3 agent turns, stop re-prompting and hand to a human rather than trapping the caller in a loop. Mutually exclusive with a condition — pairs with the conditional exits above.",
+      "actions": [
+        { "capability_id": "cap_transfer_to_human" }
+      ],
+      "goto": "END"
+    }
+  ]
+}

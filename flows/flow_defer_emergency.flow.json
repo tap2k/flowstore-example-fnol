@@ -1,0 +1,36 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_defer_emergency",
+  "version": "0.1.0",
+  "name": "Defer for emergency",
+  "type": "sad",
+  "instructions": "The caller has reported a serious injury or an unsafe scene. Calmly tell them to hang up and dial 911 right now — the claim can wait. Offer a callback from a human claims agent in about an hour. Capture 'wants_emergency_callback' (boolean) from their reply. Don't push — many callers will just want to deal with the emergency first and call back later.",
+  "scripts": [
+    { "id": "de_s1" },
+    { "id": "de_s2" },
+    { "id": "de_s3" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_de_callback",
+      "condition": {
+        "expression": "wants_emergency_callback == True",
+        "method": "calculation"
+      },
+      "assigns": {
+        "callback_window": {
+          "method": "direct",
+          "value": "1_hour"
+        }
+      },
+      "actions": [
+        { "capability_id": "cap_schedule_adjuster" }
+      ],
+      "goto": "END"
+    },
+    {
+      "id": "xp_de_no_callback",
+      "goto": "END"
+    }
+  ]
+}

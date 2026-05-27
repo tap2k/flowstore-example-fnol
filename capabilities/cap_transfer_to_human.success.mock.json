@@ -1,0 +1,10 @@
+{
+  "$schema": "flowstore://test/mock/v0",
+  "capability_id": "cap_transfer_to_human",
+  "variant": "success",
+  "description": "Warm transfer accepted by the live-agent queue. Terminal side-effect; no declared outputs.",
+  "behavior": {
+    "kind": "static",
+    "returns": { "ok": true }
+  }
+}

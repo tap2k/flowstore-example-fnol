@@ -1,0 +1,129 @@
+{
+  "$schema": "flowstore://spec/variables/v0",
+  "variables": {
+    "caller_name": {
+      "type": "string",
+      "description": "Caller's full name as they gave it."
+    },
+    "policy_number": {
+      "type": "string",
+      "description": "Northwind policy number; read back digit-by-digit before moving on."
+    },
+    "policy_active": {
+      "type": "boolean",
+      "description": "Whether the policy is active and matches the caller. Bound from cap_verify_policy."
+    },
+    "deductible_amount": {
+      "type": "number",
+      "description": "Policy deductible in USD. Bound from cap_verify_policy. NOT to be quoted by the agent — adjuster discusses it on the callback."
+    },
+    "named_drivers": {
+      "type": "string",
+      "description": "Comma-separated names on the policy. Bound from cap_verify_policy."
+    },
+    "coverage_summary": {
+      "type": "string",
+      "description": "One-line summary of the policy's coverages, retrieved each turn while answering a coverage question. Bound from cap_lookup_coverage via retrieve_on_turn."
+    },
+    "policy_retry_attempted": {
+      "type": "boolean",
+      "description": "Whether the caller has already retried policy verification once. Prevents infinite re-prompts."
+    },
+    "injuries_present": {
+      "type": "boolean",
+      "description": "Whether anyone at the scene is hurt."
+    },
+    "injury_severity": {
+      "type": "enum",
+      "description": "Severity of any reported injuries.",
+      "values": ["none", "minor", "serious", "life_threatening"]
+    },
+    "on_scene_safe": {
+      "type": "boolean",
+      "description": "Whether the caller is in a safe location right now (not in traffic, not in immediate danger)."
+    },
+    "wants_emergency_callback": {
+      "type": "boolean",
+      "description": "After deferring for emergency, whether the caller wants a human callback in an hour."
+    },
+    "incident_when": {
+      "type": "string",
+      "description": "Free-form date/time the caller gives for when the incident occurred."
+    },
+    "incident_location": {
+      "type": "string",
+      "description": "Address, intersection, or landmark where the incident occurred."
+    },
+    "incident_description": {
+      "type": "string",
+      "description": "One or two sentences from the caller describing what happened."
+    },
+    "fault_assessment": {
+      "type": "enum",
+      "description": "Caller's own assessment of fault — agent never asserts a value, only captures.",
+      "values": ["self", "other", "shared", "unclear"]
+    },
+    "police_report_filed": {
+      "type": "boolean",
+      "description": "Whether a police report was filed at the scene."
+    },
+    "police_report_number": {
+      "type": "string",
+      "description": "Police report number, if filed."
+    },
+    "vehicle_drivable": {
+      "type": "boolean",
+      "description": "Whether the caller's vehicle can be driven."
+    },
+    "damage_areas": {
+      "type": "string",
+      "description": "Free-form description of damage areas (e.g. 'front bumper and right headlight')."
+    },
+    "other_party_present": {
+      "type": "boolean",
+      "description": "Whether another vehicle / party was involved."
+    },
+    "other_party_name": {
+      "type": "string",
+      "description": "Name of the other party, if available."
+    },
+    "other_party_insurer": {
+      "type": "string",
+      "description": "Other party's insurer, if available."
+    },
+    "other_party_contact": {
+      "type": "string",
+      "description": "Other party's phone or email, if available."
+    },
+    "photos_promised": {
+      "type": "boolean",
+      "description": "Whether the caller agreed to send photos."
+    },
+    "claim_id": {
+      "type": "string",
+      "description": "Claim identifier returned by cap_file_claim. Templated into SCHEDULE_ADJUSTER scripts."
+    },
+    "estimated_callback_window": {
+      "type": "string",
+      "description": "Human-readable callback window returned by cap_file_claim (e.g. '2 hours')."
+    },
+    "claim_status": {
+      "type": "enum",
+      "description": "Final disposition of the claim from the agent's perspective.",
+      "values": ["filed", "cancelled", "escalated"]
+    },
+    "callback_number": {
+      "type": "string",
+      "description": "Phone number the adjuster should call back. Read back digit-by-digit."
+    },
+    "callback_window": {
+      "type": "enum",
+      "description": "Preferred callback window. '1_hour' reserved for emergency-deferral path.",
+      "values": ["asap", "morning", "afternoon", "next_day", "1_hour"]
+    },
+    "leave_note": {
+      "type": "boolean",
+      "description": "On cancel/no-file: whether to leave a note on the policy that the caller reached out."
+    }
+  }
+}

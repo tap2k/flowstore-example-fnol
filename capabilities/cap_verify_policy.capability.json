@@ -1,0 +1,9 @@
+{
+  "$schema": "flowstore://spec/capability/v0",
+  "id": "cap_verify_policy",
+  "name": "verify_policy",
+  "description": "Look up the caller's policy and confirm it's active. Outputs bind into scope on exit-fire.",
+  "kind": "retrieval",
+  "inputs": ["caller_name", "policy_number"],
+  "outputs": ["policy_active", "deductible_amount", "named_drivers"]
+}

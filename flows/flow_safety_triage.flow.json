@@ -1,0 +1,38 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_safety_triage",
+  "version": "0.1.0",
+  "name": "Safety triage",
+  "type": "happy",
+  "instructions": "Open warmly and lead with safety, not paperwork. Greet the caller, introduce yourself, and ask if everyone is okay and somewhere safe. Capture 'injuries_present', 'injury_severity' (none / minor / serious / life_threatening), and 'on_scene_safe' from the caller's reply. If they mention serious injuries or aren't in a safe spot, gently but firmly urge them to dial 911 — make clear the claim can wait. Don't ask about the incident itself yet; that's the next flow's job.",
+  "guardrails": [
+    {
+      "id": "gr_st_safety_gate",
+      "statement": "Do not ask any incident, vehicle, or policy questions until the caller has confirmed everyone is okay and the scene is safe. Safety triage gates the rest of the call."
+    }
+  ],
+  "scripts": [
+    { "id": "st_s1" },
+    { "id": "st_s2" },
+    { "id": "st_s3" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_st_to_defer",
+      "condition": {
+        "expression": "injury_severity == \"serious\" or injury_severity == \"life_threatening\" or on_scene_safe == False",
+        "method": "calculation"
+      },
+      "notes": "Calculation, not LLM: a safety escalation must be deterministic and auditable — we never want a probabilistic judgment standing between an injured caller and a 911 prompt.",
+      "goto": "flow_defer_emergency"
+    },
+    {
+      "id": "xp_st_to_identify",
+      "condition": {
+        "expression": "Caller has confirmed everyone is okay and they're in a safe location.",
+        "method": "llm"
+      },
+      "goto": "flow_identify"
+    }
+  ]
+}

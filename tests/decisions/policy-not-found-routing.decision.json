@@ -1,0 +1,39 @@
+{
+  "$schema": "flowstore://test/decision-test/v0",
+  "id": "policy-not-found-routing",
+  "name": "Policy-not-found: route on how the caller responds",
+  "description": "Prefix drives the caller through safety + a policy number that fails to verify (cap_verify_policy mock = not_found), landing in flow_policy_not_found ('I'm not finding that policy'). Each branch is a different caller response; we check it routes to retry vs. human vs. give-up (flow_policy_not_found.exit_paths). The shared prefix is replayed once per branch.",
+  "prefix_turns": [
+    "I'm fine and somewhere safe.",
+    "Pat Lin, policy one two three four five.",
+    "Yes, that's right."
+  ],
+  "branches": [
+    {
+      "user_input": "Oh wait, maybe it's one two three four six?",
+      "expected_class": "retry",
+      "must_not_contain": ["claim NW"],
+      "notes": "corrected number, not yet retried -> xp_pnf_retry back to flow_identify."
+    },
+    {
+      "user_input": "Just put me through to a real person, please.",
+      "expected_class": "human",
+      "must_contain": ["agent"],
+      "notes": "wants a person -> xp_pnf_human, fires cap_transfer_to_human."
+    },
+    {
+      "user_input": "You know what, forget it, I'll call back later.",
+      "expected_class": "giveup",
+      "must_not_contain": ["claim NW"],
+      "notes": "gives up -> xp_pnf_giveup, fires cap_log_no_file."
+    }
+  ],
+  "mock_bindings": {
+    "cap_verify_policy": "not_found",
+    "cap_transfer_to_human": "success",
+    "cap_log_no_file": "success"
+  },
+  "model": "gemini-2.5-flash",
+  "language": "en-US",
+  "tags": ["routing", "policy-not-found"]
+}

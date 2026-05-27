@@ -1,0 +1,10 @@
+{
+  "$schema": "flowstore://test/mock/v0",
+  "capability_id": "cap_schedule_adjuster",
+  "variant": "success",
+  "description": "Callback booked. Side-effect only — no declared outputs, so the returns object is annotation-only.",
+  "behavior": {
+    "kind": "static",
+    "returns": { "ok": true }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_schedule_adjuster",
+  "version": "0.1.0",
+  "name": "Schedule adjuster callback",
+  "type": "happy",
+  "instructions": "The claim is filed — {claim_id} and {estimated_callback_window} are now in scope. Tell the caller their claim id and the callback window. Capture 'callback_number' (read back digit-by-digit) and 'callback_window' (asap / morning / afternoon / next_day). Close warmly — reassure they don't need to do anything else until the adjuster calls. IMPORTANT: if {claim_id} is empty, filing did not go through — do NOT invent a claim id. Apologize briefly, tell the caller the claim wasn't filed, and offer to connect them to a human claims agent.",
+  "scripts": [
+    { "id": "sa_s1" },
+    { "id": "sa_s2" },
+    { "id": "sa_s3" },
+    { "id": "sa_s4" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_sa_done",
+      "condition": {
+        "expression": "Caller has provided a callback number (confirmed via readback) and a preferred callback window.",
+        "method": "llm"
+      },
+      "actions": [
+        { "capability_id": "cap_schedule_adjuster" }
+      ],
+      "goto": "END"
+    },
+    {
+      "id": "xp_sa_filing_failed",
+      "condition": {
+        "expression": "Filing did not complete (no claim id is available) and the caller wants a human to finish the claim.",
+        "method": "llm"
+      },
+      "notes": "Recovery path for a cap_file_claim failure (e.g. the system_error mock): claim_id never bound, so rather than fabricate one the agent hands off to a human.",
+      "actions": [
+        { "capability_id": "cap_transfer_to_human" }
+      ],
+      "goto": "END"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "flowstore://meta/comment/v0",
+  "id": "c-2026-05-22-b1",
+  "anchor": { "kind": "exit_path", "id": "flow_policy_not_found::xp_pnf_budget" },
+  "author": "sam-ops",
+  "timestamp": "2026-05-22T11:15:00Z",
+  "body": "Why max_turns: 3 here when xp_pnf_human already escalates after one retry? Belt-and-suspenders, or can the conditional miss? Leaving open until we see real transcripts.",
+  "resolved": false
+}

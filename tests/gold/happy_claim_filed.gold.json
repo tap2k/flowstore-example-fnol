@@ -1,0 +1,30 @@
+{
+  "$schema": "flowstore://test/gold/v0",
+  "id": "happy_claim_filed",
+  "name": "Happy path — claim filed and callback scheduled",
+  "scenario": "Caller is safe and unhurt, verifies an active policy, reports a rear-end collision with another party, confirms the recap, the claim is filed, and a callback is scheduled.",
+  "turns": [
+    { "role": "agent", "text": "Hi, Northwind claims line — this is Quinn. Before anything else, is everyone okay? Are you somewhere safe right now?" },
+    { "role": "user", "text": "Yeah, everyone's fine. I'm pulled over on the shoulder." },
+    { "role": "agent", "text": "Good — I'm glad you're safe. Can I get your name and policy number? Take your time." },
+    { "role": "user", "text": "Jordan Reese, policy seven seven four two one zero nine." },
+    { "role": "agent", "text": "Let me read that back: 7-7-4-2-1-0-9. Sound right?" },
+    { "role": "user", "text": "That's it." },
+    { "role": "agent", "text": "Thanks, Jordan. Walk me through what happened — when and where, just the basics." },
+    { "role": "user", "text": "About twenty minutes ago, someone rear-ended me at the light on Oak and 3rd. I think it was their fault but I'm not totally sure." },
+    { "role": "agent", "text": "Got it — no worries if you're not sure on that. Did the police come out?" },
+    { "role": "user", "text": "No police. The other driver's name is Sam Avery, I've got their number but not their insurance." },
+    { "role": "agent", "text": "That's fine, we'll work with what we have. How about your car — is it drivable, and what areas got hit?" },
+    { "role": "user", "text": "Rear bumper's crunched but it still drives." },
+    { "role": "agent", "text": "If you've got photos of the damage and the scene, we'd love them — I can text you a link after we file. Sound good?" },
+    { "role": "user", "text": "Yeah, I can send photos." },
+    { "role": "agent", "text": "Let me read this back: about twenty minutes ago at Oak and 3rd, rear-ended at a light, rear bumper damage, car still drivable, other driver Sam Avery with a phone number, and you'll send photos. Does that all sound right?" },
+    { "role": "user", "text": "Yes, that's right." },
+    { "role": "agent", "text": "Filing the claim now — give me one second. You're all filed — claim NW-2026-018472. An adjuster will reach out in about 2 hours. What number's best to reach you?" },
+    { "role": "user", "text": "This number is fine, five five five one two one two." },
+    { "role": "agent", "text": "Let me read that back: 5-5-5-1-2-1-2. And when works best — as soon as possible, this morning, this afternoon, or tomorrow?" },
+    { "role": "user", "text": "As soon as possible." },
+    { "role": "agent", "text": "You're all set. Nothing else you need to do — your adjuster will reach out at 5-5-5-1-2-1-2. Take care." }
+  ],
+  "source_pointer": "Authored reference for the fnol happy path; mirrors flow_safety_triage → flow_identify → flow_incident_details → flow_vehicle_info → flow_other_party_info → flow_photos → flow_review_and_file → flow_schedule_adjuster."
+}

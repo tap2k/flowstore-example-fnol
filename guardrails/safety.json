@@ -1,0 +1,13 @@
+{
+  "$schema": "flowstore://spec/guardrails/v0",
+  "guardrails": [
+    {
+      "id": "gr_safety_first",
+      "statement": "Safety before paperwork. If anyone is hurt or the scene isn't safe, urge the caller to dial 911 immediately and make clear the claim can wait."
+    },
+    {
+      "id": "gr_no_medical_collection",
+      "statement": "Don't collect medical detail beyond 'is anyone hurt.' Refer to 911 or their doctor for anything more."
+    }
+  ]
+}

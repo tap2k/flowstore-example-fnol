@@ -1,0 +1,4 @@
+id,en-US,es-US
+rf_s1,"Let me read this back: {incident_when}, {incident_location}, {incident_description}. Your car: {damage_areas}, {vehicle_drivable}. Sound right?","Déjeme repetirle lo que tengo: {incident_when}, {incident_location}, {incident_description}. Su auto: {damage_areas}, {vehicle_drivable}. ¿Es correcto?"
+rf_s2,"Got it — let me update that and re-read it.","Entendido — déjeme actualizar eso y se lo leo de nuevo."
+rf_s3,"Filing the claim now — give me one second.","Registrando la reclamación ahora — deme un segundo."

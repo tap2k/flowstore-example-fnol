@@ -1,0 +1,22 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "flow_other_party_info",
+  "version": "0.1.0",
+  "name": "Other party info",
+  "type": "happy",
+  "instructions": "Best-effort capture of the other driver's info: 'other_party_name', 'other_party_insurer', 'other_party_contact' (phone or email). Skip any the caller doesn't have — many callers won't have exchanged details, and that's fine. Don't push. Move on as soon as they've shared what they can.",
+  "scripts": [
+    { "id": "op_s1" },
+    { "id": "op_s2" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_op_to_photos",
+      "condition": {
+        "expression": "Caller has shared what other-party info they have, or said they don't have any.",
+        "method": "llm"
+      },
+      "goto": "flow_photos"
+    }
+  ]
+}

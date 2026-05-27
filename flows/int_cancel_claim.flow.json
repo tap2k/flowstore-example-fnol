@@ -1,0 +1,29 @@
+{
+  "$schema": "flowstore://spec/flow/v0",
+  "id": "int_cancel_claim",
+  "version": "0.1.0",
+  "name": "Interrupt — cancel / never mind",
+  "type": "interrupt",
+  "instructions": "The caller wants to cancel or was just looking for information. Confirm without pushing and ask whether to leave a note on the policy that they reached out, in case they decide to file later. Capture 'leave_note' (boolean) and fire log_no_file (the backend decides what to do with leave_note).",
+  "entry_condition": {
+    "expression": "Caller says they want to cancel, don't want to file after all, or were just looking for information.",
+    "method": "llm"
+  },
+  "scripts": [
+    { "id": "icc_s1" },
+    { "id": "icc_s2" }
+  ],
+  "exit_paths": [
+    {
+      "id": "xp_icc_done",
+      "condition": {
+        "expression": "Caller has answered whether to leave a note on the policy.",
+        "method": "llm"
+      },
+      "actions": [
+        { "capability_id": "cap_log_no_file" }
+      ],
+      "goto": "END"
+    }
+  ]
+}

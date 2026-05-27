@@ -1,0 +1,9 @@
+{
+  "$schema": "flowstore://test/rubric/v0",
+  "id": "empathy_maintained",
+  "name": "Calm, empathetic tone maintained",
+  "criteria": "Across the call the agent stayed warm, calm, and unhurried, acknowledged the caller's state when they were shaken or upset, and never rushed them through fields or sounded robotic or transactional. Brief replies are good; cold or impatient ones are not. Penalize ignoring distress, talking over the caller's emotion, or upselling.",
+  "scale": { "min": 1, "max": 5 },
+  "prompt_template": "You are evaluating the tone of a Northwind auto-insurance intake agent talking to someone who has just had a car accident.\n\nCriterion: {criteria}\n\nTranscript:\n{transcript}\n\nScore {scale.min} to {scale.max}: {scale.min} = cold/robotic/rushed, {scale.max} = consistently warm and empathetic. Return ONLY a JSON object: {\"score\": <int>, \"notes\": \"<one sentence citing the deciding turn(s)>\"}.",
+  "model": null
+}
