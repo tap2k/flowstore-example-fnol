@@ -15,6 +15,82 @@ generic throughout.
 `fnol.txt` is the original plain-language design narrative the spec was authored from —
 kept for context; nothing loads it.
 
+There are two ways to use this example: **open it in the editor** to explore the spec on
+a canvas (no install — start here), or **compile and test it from the command line** (the
+harness sections further down). They're independent; the editor needs nothing from the
+CLI side.
+
+---
+
+## Open it in the editor
+
+The fastest way to see this agent is the hosted editor at
+[create.flowstore.org](https://create.flowstore.org) — nothing to install; it runs in your
+browser and autosaves to `localStorage`. Loading and browsing the spec needs no account and
+no API key (only **Run**/simulate calls an LLM).
+
+**Load it — open from GitHub (recommended).** This path round-trips: you can **Save** edits
+straight back to the repo, so it's the one you'll keep using as you work.
+
+1. Add a GitHub PAT in **Settings**.
+2. Click the GitHub-open (cloud) icon in the toolbar.
+3. Pick the repo and branch, and click **Open**.
+
+The dropdown lists every repo your PAT can reach — ones you own, plus collaborator and org
+repos — so this works as soon as the project lives in a repo you have access to (your own
+copy of it, or this repo if you're a collaborator). Opening needs only read access; Save is
+the step that needs write.
+
+**Or Import a folder (no account, no setup).** Works for anyone — including read-only access
+to this upstream repo — and is the quickest one-off look:
+
+1. Get the project onto your machine: on the
+   [GitHub repo](https://github.com/tap2k/flowstore-example-fnol) use **Code → Download ZIP**
+   and unzip it, or `git clone https://github.com/tap2k/flowstore-example-fnol`.
+2. In the editor toolbar, click the **Import** icon (the up-arrow tray).
+3. Drag the project **folder** onto the drop zone, or click **Choose folder…** and pick it.
+   Drop the *folder*, not a GitHub `.zip` — the editor's ZIP import expects a flat,
+   editor-exported zip, not GitHub's wrapped one. The loader reads only the canonical
+   flowstore files and ignores `scripts/`, `docs/`, `.venv/`, `.git/`, and the rest.
+
+Either way, all 16 flows land on the canvas, validated on load.
+
+**Look around once it's loaded.**
+
+- The canvas *is* the flow graph — 16 flows, entry at **`flow_safety_triage`** (Quinn opens
+  by making sure everyone's safe). The four `int_*` nodes are **interrupt** flows: globally
+  callable, so any flow can pivot to them when their entry condition matches.
+- Click a flow to open its inspector — behavioral instructions plus per-language scripts
+  (en-US / es-US). Click an edge to see its exit `condition` and `goto`.
+- The toolbar opens the agent envelope: **Agent** (Quinn's meta + the two languages),
+  **Guardrails**, **Capabilities** (6), **Knowledge** (FAQ, glossary, claim-types table),
+  **Variables**. The [feature map below](#feature--where-its-demonstrated) says exactly which
+  flow or file shows off each capability.
+- The **Assistant** (sparkles button, top-right of the canvas) is the easy way to modify or
+  explore the spec — describe what you want in plain language and it edits through
+  schema-aware tools, re-validating after each change. Needs an LLM key in **Settings**
+  (Google / OpenAI / OpenRouter). Try against this spec: *"What does `flow_route_verified`
+  actually do?"*, *"Add a guardrail that we always confirm the claim number before ending the
+  call"*, *"Add an exit from `flow_identify` for callers whose policy lookup fails"*.
+- **Run** (top-right) opens the simulator — chat with Quinn against the compiled prompt.
+  Uses the same LLM key. Try: *"I was just in a car accident."*
+- **Export → Copy System Prompt** gives you the compiled prompt; **Export JSON** / **Export
+  ZIP (decomposed)** round-trip the spec back out.
+
+**New to the editor itself? The model in 30 seconds.** A flowstore spec is one JSON object
+with two parts: an **agent envelope** (meta, guardrails, knowledge, capabilities, variables —
+the toolbar sheets) and a **graph of flows** (what's on the canvas). Flows are the nodes —
+units of conversational behavior with instructions, per-language scripts, and a type:
+`happy`, `sad`, `off`, `utility`, or `interrupt`. The first four are organizational; `interrupt`
+is structural — globally callable, so any flow can pivot to it when its entry condition matches.
+Exit paths are the edges, each with a `condition` (when this exit is taken) and a `goto`
+(another flow's id, `END` to terminate, or `RETURN` to return to whoever called this flow). A
+flow with any `RETURN` exit is **callable** — entering it pushes a call frame. Conditions and
+assigns use one of three **methods**: `llm` (semantic judgment), `calculation` (a deterministic
+Python-like expression over variables), or `direct` (a literal value). **Export** is
+deterministic codegen — the spec flattens into one system prompt plus tool schemas you can
+paste into any LLM runtime, which is also what the simulator runs against.
+
 ---
 
 ## Layout
