@@ -1,16 +1,13 @@
 """Shared harness internals for the fnol worked example.
 
-This module is the one place that knows (a) how to turn a flowstore project
-into a runnable agent — by compiling it to a system prompt + tool schemas —
-and (b) how to actually drive that agent through a conversation, dispatching
-capability calls to recorded mocks instead of real systems.
+This module knows how to drive a compiled flowstore agent through a conversation,
+dispatching capability calls to recorded mocks instead of real systems. The
+compile step itself — turning a flowstore project into a system prompt + tool
+schemas — lives in ``_compile.py``; this module imports nothing from there.
 
-It is intentionally self-contained: the fnol example is meant to travel to its
-own repo, so nothing here reaches back into a sibling flowstore checkout other
-than to invoke "the compiler" (see compile_prompt). The default driver is
-Gemini because that matches the upstream repo, but everything provider-specific
-is isolated to the small "Gemini glue" section below — swap that section to run
-the same harness on another LLM.
+The default driver is Gemini because that matches the upstream repo, but
+everything provider-specific is isolated to the small "Gemini glue" section
+below — swap that section to run the same harness on another LLM.
 
 The compiled-prompt path is the default target: a single LLM is handed the
 system prompt + tool schemas and we run the tool-call loop ourselves. A deployed
@@ -23,118 +20,7 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
-import subprocess
 from pathlib import Path
-
-
-# --------------------------------------------------------------------------
-# Compiling a flowstore project -> (system_prompt, tool_schemas)
-# --------------------------------------------------------------------------
-
-def _repo_root_from_project(project_dir: Path) -> Path:
-    """Locate the flowstore checkout that owns this project.
-
-    Mirrors the coffee harness: the project lives at <repo>/examples/<name>,
-    so the repo root is two directories up. When the fnol example is lifted
-    into its own repo this stops mattering — the FLOWSTORE_COMPILE_CMD override
-    (see compile_prompt) lets you point at a published CLI instead.
-    """
-    return project_dir.parent.parent
-
-
-def _compile_cmd(repo_root: Path) -> list[str]:
-    """The base argv used to invoke the flowstore compiler.
-
-    By default we shell out to the in-repo workspace script. When flowstore
-    ships a published CLI this collapses to simply ``["flowstore-compile"]``.
-    For portability (e.g. once this example moves to its own repo) the whole
-    command can be overridden with the FLOWSTORE_COMPILE_CMD env var, which is
-    shell-split — e.g. ``FLOWSTORE_COMPILE_CMD="flowstore-compile"``.
-    """
-    override = os.environ.get("FLOWSTORE_COMPILE_CMD")
-    if override:
-        return shlex.split(override)
-    # In-repo invocation. Run from the repo root so the workspace flag resolves.
-    return [
-        "npm",
-        "-w",
-        "@flowstore/core",
-        "run",
-        "--silent",
-        "flowstore-compile",
-        "--",
-    ]
-
-
-def _run_compile(project_dir: Path, repo_root: Path, fmt: str,
-                 language: str | None = None,
-                 vars_file: str | None = None) -> str:
-    """Invoke the compiler and return its raw stdout (JSON)."""
-    argv = _compile_cmd(repo_root)
-    # The override form is a bare CLI that takes the project dir directly; the
-    # in-repo form already ends in "--" and also takes the project dir next.
-    argv = argv + [str(project_dir), "--format", fmt]
-    if language:
-        argv += ["--language", language]
-    if vars_file:
-        argv += ["--vars-file", str(vars_file)]
-    proc = subprocess.run(
-        argv,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"flowstore-compile failed (format={fmt}, exit={proc.returncode}):\n"
-            f"  cmd: {' '.join(argv)}\n"
-            f"  stderr: {proc.stderr.strip()}"
-        )
-    return proc.stdout
-
-
-def compile_prompt(project_dir, repo_root, language=None, vars_file=None,
-                   system_prompt_override=None):
-    """Compile a flowstore project to a (system_prompt, tool_schemas, agent_dict).
-
-    - project_dir / repo_root: paths (str or Path).
-    - language: optional language code (e.g. "es-US"); falls back to the
-      project default when omitted.
-    - vars_file: optional absolute path to a variables override file.
-    - system_prompt_override: optional path to a file whose contents replace the
-      compiled system prompt (tool schemas still come from the compiler).
-
-    Returns (system_prompt: str, tool_schemas: list[dict], agent_dict: dict).
-    agent_dict is the parsed agent.json (handy for ids, languages, etc.).
-    """
-    project_dir = Path(project_dir)
-    repo_root = Path(repo_root)
-
-    raw = _run_compile(project_dir, repo_root, "prompt",
-                        language=language, vars_file=vars_file)
-    compiled = json.loads(raw)
-    system_prompt = compiled.get("system_prompt", "")
-    tool_schemas = compiled.get("tool_schemas", []) or []
-
-    if system_prompt_override:
-        system_prompt = Path(system_prompt_override).read_text(encoding="utf-8")
-
-    agent_dict = json.loads((project_dir / "agent.json").read_text(encoding="utf-8"))
-    return system_prompt, tool_schemas, agent_dict
-
-
-def compile_spec(project_dir, repo_root, language=None, vars_file=None):
-    """Compile the project to its resolved spec dict (``--format spec``).
-
-    The runner hands this to spec-aware evaluators (e.g. tool_calls_check) so
-    they can validate capability calls against the declared capabilities.
-    """
-    project_dir = Path(project_dir)
-    repo_root = Path(repo_root)
-    raw = _run_compile(project_dir, repo_root, "spec",
-                       language=language, vars_file=vars_file)
-    return json.loads(raw)
 
 
 # --------------------------------------------------------------------------
@@ -476,19 +362,17 @@ class Conversation:
 # --------------------------------------------------------------------------
 
 def resolve_paths(tests_file):
-    """From a tests/<...>/<file> path, resolve (project_dir, repo_root).
+    """From a tests/<...>/<file> path, resolve the project_dir.
 
-    The project root is the ancestor named like the example dir — concretely,
-    the directory that contains agent.json. We walk up from the test file until
-    we find it; repo_root is then project_dir.parent.parent (see
-    _repo_root_from_project). This mirrors coffee's "walk up to examples/<name>"
-    approach without hard-coding the example's name.
+    The project root is the nearest ancestor that contains agent.json — we walk
+    up from the test file until we find it. Returns just the project_dir; the
+    flowstore checkout location is no longer needed here (the compiler is invoked
+    via FLOWSTORE_COMPILE_CMD; see scripts/_compile.py).
     """
     p = Path(tests_file).resolve()
     for ancestor in [p] + list(p.parents):
         if (ancestor / "agent.json").is_file():
-            project_dir = ancestor
-            return project_dir, _repo_root_from_project(project_dir)
+            return ancestor
     raise RuntimeError(f"could not find a flowstore project (agent.json) above {tests_file}")
 
 

@@ -62,13 +62,14 @@ def main(argv=None):
     parser.add_argument("--vars-file", default=None)
     args = parser.parse_args(argv)
 
-    from _agent import (compile_prompt, default_model, load_mocks, make_client,
+    from _agent import (default_model, load_mocks, make_client,
                         make_dispatcher, name_to_id, resolve_paths, Conversation)
+    from _compile import compile_prompt
     from _eval import eval_capability_assertions, load_json
 
     dec_path = Path(args.decision).resolve()
     dec = load_json(dec_path)
-    project_dir, repo_root = resolve_paths(dec_path)
+    project_dir = resolve_paths(dec_path)
 
     language = args.language or dec.get("language")
     vars_file = args.vars_file or dec.get("vars_file")
@@ -76,7 +77,7 @@ def main(argv=None):
         vars_file = str(Path(vars_file).resolve())
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
-        project_dir, repo_root, language=language, vars_file=vars_file,
+        project_dir, language=language, vars_file=vars_file,
         system_prompt_override=args.system_prompt,
     )
 

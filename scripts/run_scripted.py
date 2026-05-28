@@ -198,15 +198,15 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     # --- SDK + harness internals imported only after arg parsing -----------
-    from _agent import (compile_prompt, compile_spec, default_model, load_mocks,
-                        make_client, make_dispatcher, name_to_id, resolve_paths,
-                        Conversation)
+    from _agent import (default_model, load_mocks, make_client, make_dispatcher,
+                        name_to_id, resolve_paths, Conversation)
+    from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
 
     case_path = Path(args.case).resolve()
     case = load_json(case_path)
-    project_dir, repo_root = resolve_paths(case_path)
+    project_dir = resolve_paths(case_path)
 
     language = args.language or case.get("language")
     vars_file = args.vars_file or case.get("vars_file")
@@ -214,11 +214,10 @@ def main(argv=None):
         vars_file = str(Path(vars_file).resolve())
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
-        project_dir, repo_root, language=language, vars_file=vars_file,
+        project_dir, language=language, vars_file=vars_file,
         system_prompt_override=args.system_prompt,
     )
-    compiled_spec = compile_spec(project_dir, repo_root, language=language,
-                                vars_file=vars_file)
+    compiled_spec = compile_spec(project_dir, language=language, vars_file=vars_file)
 
     model = case.get("model") or default_model(project_dir)
     name_map = name_to_id(agent_dict, project_dir=project_dir)

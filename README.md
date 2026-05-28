@@ -200,9 +200,8 @@ $FLOWSTORE_COMPILE_CMD "$PWD" --format prompt --language es-US
 
 Pass the project directory as an **absolute** path (`$PWD` above): the `npm --prefix` form
 runs from the flowstore checkout, so a relative `.` would resolve there, not here. The test
-scripts handle this for you (they resolve the project path before invoking the compiler);
-unset `FLOWSTORE_COMPILE_CMD` falls back to `npm -w @flowstore/core …` resolved two
-directories up (the in-monorepo layout).
+scripts handle this for you. `FLOWSTORE_COMPILE_CMD` is required — the scripts exit with a
+clear hint if it's unset.
 
 `prompts/GOLD-EXTRACTION-PROMPT.txt` is the authoring prompt for turning real source
 material (call transcripts, scripts, docs) into the `tests/gold/*.gold.json` records here.
