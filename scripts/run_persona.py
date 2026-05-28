@@ -97,7 +97,8 @@ def main(argv=None):
 
     from _agent import (compile_prompt, compile_spec, default_model, load_mocks,
                         make_client, make_dispatcher, name_to_id, resolve_paths)
-    from _eval import clean_evaluator_result, load_json, run_named_evaluator
+    from _eval import (clean_evaluator_result, eval_capability_assertions,
+                       load_json, run_named_evaluator)
 
     case_path = Path(args.case).resolve()
     case = load_json(case_path)
@@ -146,7 +147,11 @@ def main(argv=None):
             "capability_calls": convo.capability_calls,
             "final_variables": {},
         }
-        evals = []
+        # Deterministic capability-invocation checks first (order-independent,
+        # so they apply to a free-form persona conversation), then named
+        # evaluators (rubric -> LLM judge; else python evaluator).
+        evals = eval_capability_assertions(
+            convo.capability_calls, case.get("capability_assertions"))
         for name in case.get("evaluators", []) or []:
             evals.append(clean_evaluator_result(run_named_evaluator(
                 name, project_dir=project_dir, result=partial,

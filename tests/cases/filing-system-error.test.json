@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/case/v0",
   "id": "filing-system-error",
   "name": "Claims backend errors on file — agent recovers without fabricating",
-  "description": "Robustness path: verify_policy is active, but cap_file_claim raises (system_error mock). claim_id never binds, so the agent must NOT invent a claim id; it should apologize, say the claim wasn't filed, and offer a human. Demonstrates the error-behavior mock kind + instruction-guided recovery in flow_schedule_adjuster.",
+  "description": "Robustness path: verify_policy is active, but cap_file_claim raises (system_error mock). claim_id never binds, so the agent must NOT invent a claim id; it should apologize, say the claim wasn't filed, and offer a human. Demonstrates the error-behavior mock kind + instruction-guided recovery in flow_schedule_adjuster. capability_assertions confirm the agent actually attempted cap_file_claim (so the error path is what's exercised) and escalated via cap_transfer_to_human.",
   "user_turns": [
     "Everyone's fine, I'm safe.",
     "Pat Lin, policy three oh nine eight eight one two.",
@@ -21,6 +21,11 @@
   "transcript_assertions": [
     { "kind": "regex", "pattern": "NW-\\d{4}-\\d{6}", "must_appear": false },
     { "kind": "regex", "pattern": "claim\\s+NW", "must_appear": false }
+  ],
+  "capability_assertions": [
+    { "capability": "cap_verify_policy", "invoked": true },
+    { "capability": "cap_file_claim", "invoked": true },
+    { "capability": "cap_transfer_to_human", "invoked": true }
   ],
   "evaluators": ["no_premium_speculation", "regex_match", "tool_calls_check"],
   "model": "gemini-2.5-flash",

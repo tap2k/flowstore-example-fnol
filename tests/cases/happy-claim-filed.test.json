@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/case/v0",
   "id": "happy-claim-filed",
   "name": "Safe caller files a rear-end collision claim and schedules a callback",
-  "description": "Full happy path: safety confirmed -> identify (verify_policy active) -> incident -> vehicle -> other party -> photos -> review -> file_claim (success) -> schedule_adjuster. Exercises every assertion type plus a Python evaluator and gold-compared rubric.",
+  "description": "Full happy path: safety confirmed -> identify (verify_policy active) -> incident -> vehicle -> other party -> photos -> review -> file_claim (success) -> schedule_adjuster. Exercises every assertion type (capability_assertions assert the three capabilities fired; the NW-2026-018472 substring now checks the agent relayed the real claim id, not that the call happened) plus a Python evaluator and gold-compared rubric.",
   "user_turns": [
     "Yeah, everyone's fine. I'm pulled over on the shoulder.",
     "Jordan Reese, policy seven seven four two one zero nine.",
@@ -36,6 +36,11 @@
   "state_assertions": [
     { "variable": "claim_status", "equals": "filed" },
     { "variable": "claim_id", "is_set": true }
+  ],
+  "capability_assertions": [
+    { "capability": "cap_verify_policy", "invoked": true },
+    { "capability": "cap_file_claim", "invoked": true },
+    { "capability": "cap_schedule_adjuster", "invoked": true }
   ],
   "evaluators": [
     "regex_match",

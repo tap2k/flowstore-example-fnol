@@ -39,6 +39,31 @@ def load_json(path: Path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def eval_capability_assertions(capability_calls, assertions):
+    """capability_assertions[] against result.capability_calls[].
+
+    Each assertion names a capability id and asserts whether the agent invoked
+    it: invoked=True (default) requires at least one call, invoked=False forbids
+    any. Lives here (not in run_scripted) because it's order-independent and
+    deterministic, so both the scripted and persona drivers use it. Unlike
+    state_assertions, capability_calls is populated on the compiled-prompt target
+    too, so these always evaluate. Returns a list of evaluator_results entries.
+    """
+    results = []
+    calls = capability_calls or []
+    for i, a in enumerate(assertions or []):
+        cap = a.get("capability", f"?{i}")
+        want = a.get("invoked", True)
+        count = sum(1 for c in calls if c.get("capability") == cap)
+        ok = (count > 0) == bool(want)
+        results.append({
+            "name": f"capability.{cap}",
+            "passed": ok,
+            "notes": f"{cap} invoked {count}x, expected invoked={want}",
+        })
+    return results
+
+
 def _load_python_evaluator(py_path: Path):
     """Import a tests/evaluators/<name>.py module by path and return it."""
     spec = importlib.util.spec_from_file_location(f"_fnol_eval_{py_path.stem}", py_path)

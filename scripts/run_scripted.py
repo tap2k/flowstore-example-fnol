@@ -7,7 +7,8 @@ then we alternate: user_turn -> agent_reply, until the turns run out. We then ru
   (a) per-turn assertions[]          (turn = 1-indexed into the AGENT-only subsequence)
   (b) transcript_assertions[]        (substring / regex / count / must_terminate_within)
   (c) state_assertions[]             (against final_variables; empty on the prompt target)
-  (d) named evaluators[]             (rubric -> LLM judge, or tests/evaluators/<name>.py)
+  (d) capability_assertions[]        (was a capability invoked? against capability_calls)
+  (e) named evaluators[]             (rubric -> LLM judge, or tests/evaluators/<name>.py)
 
 Results are written to tests/runs/<UTCstamp>-<label>/<case_id>.result.json
 (flowstore://run/result/v0).
@@ -200,7 +201,8 @@ def main(argv=None):
     from _agent import (compile_prompt, compile_spec, default_model, load_mocks,
                         make_client, make_dispatcher, name_to_id, resolve_paths,
                         Conversation)
-    from _eval import clean_evaluator_result, load_json, run_named_evaluator
+    from _eval import (clean_evaluator_result, eval_capability_assertions,
+                       load_json, run_named_evaluator)
 
     case_path = Path(args.case).resolve()
     case = load_json(case_path)
@@ -255,8 +257,11 @@ def main(argv=None):
     # (c) state assertions
     result["evaluator_results"] += eval_state_assertions(
         result["final_variables"], case.get("state_assertions"))
+    # (d) capability-invocation assertions (over capability_calls[])
+    result["evaluator_results"] += eval_capability_assertions(
+        result["capability_calls"], case.get("capability_assertions"))
 
-    # (d) named evaluators (rubric -> LLM judge; else python evaluator)
+    # (e) named evaluators (rubric -> LLM judge; else python evaluator)
     judge_model = default_model(project_dir, role="judge")
     gold = None
     gold_id = case.get("gold_id")

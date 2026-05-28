@@ -7,9 +7,12 @@ branches. For EACH branch we start a FRESH conversation, replay the prefix
 (the opening agent turn is implicit/auto via chatbot_initiates), send the
 branch's user_input, and capture the agent's immediate reply.
 
-Per-branch verdict:
-  - must_contain:     all listed phrases present (case-insensitive)  -> required
-  - must_not_contain: none of the listed phrases present              -> required
+Per-branch verdict (AND of the following):
+  - must_contain:          all listed phrases present (case-insensitive)
+  - must_not_contain:      none of the listed phrases present
+  - capability_assertions: each {capability, invoked?} holds against the calls
+                           this branch fired (delta from the prefix)
+Granular capability results land in branch["capability_results"] when present.
 expected_class is recorded for information only.
 
 Output uses a decision-specific schema (flowstore://run/decision-result/v0) so
@@ -61,7 +64,7 @@ def main(argv=None):
 
     from _agent import (compile_prompt, default_model, load_mocks, make_client,
                         make_dispatcher, name_to_id, resolve_paths, Conversation)
-    from _eval import load_json
+    from _eval import eval_capability_assertions, load_json
 
     dec_path = Path(args.decision).resolve()
     dec = load_json(dec_path)
@@ -92,15 +95,26 @@ def main(argv=None):
         convo.agent_reply(None)            # implicit opening agent turn
         for user_text in prefix_turns:
             convo.agent_reply(user_text)
+        # Snapshot before the branch input so capability_assertions evaluate
+        # only against calls THIS branch fired, not anything the prefix invoked
+        # (the prefix may itself trigger e.g. cap_verify_policy).
+        calls_before = len(convo.capability_calls)
         reply = convo.agent_reply(branch.get("user_input", ""))
+        branch_calls = convo.capability_calls[calls_before:]
         passed, notes = eval_branch(reply, branch)
-        branches_out.append({
+        cap_results = eval_capability_assertions(
+            branch_calls, branch.get("capability_assertions"))
+        cap_passed = all(r.get("passed") is True for r in cap_results)
+        entry = {
             "user_input": branch.get("user_input", ""),
             "expected_class": branch.get("expected_class"),
             "agent_reply": reply,
-            "passed": passed,
+            "passed": passed and cap_passed,
             "notes": notes,
-        })
+        }
+        if cap_results:
+            entry["capability_results"] = cap_results
+        branches_out.append(entry)
 
     prompt_source = args.system_prompt if args.system_prompt else "flowstore-compile"
     result = {
