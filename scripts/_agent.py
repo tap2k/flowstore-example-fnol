@@ -69,71 +69,58 @@ def name_to_id(agent_dict, project_dir=None):
     return mapping
 
 
-def load_mocks(project_dir):
-    """Load all mocks keyed by (capability_id, variant) -> mock dict.
+def load_scenario(project_dir, scenario_id):
+    """Load tests/scenarios/<scenario_id>.scenario.json. None if not found.
 
-    A mock dict carries behavior.kind ("static" -> behavior.returns, or
-    "error" -> behavior.error). The dispatcher (make_dispatcher) interprets it.
+    A scenario carries `vars` (free-form context-vars dict) and `mocks`
+    (capability_id -> {kind: static|error, returns/error}). Replaces the
+    older split of tests/vars.<name>.json + capabilities/*.mock.json.
     """
-    project_dir = Path(project_dir)
-    mocks: dict[tuple[str, str], dict] = {}
-    cap_dir = project_dir / "capabilities"
-    if cap_dir.is_dir():
-        for path in sorted(cap_dir.glob("*.mock.json")):
-            mock = json.loads(path.read_text(encoding="utf-8"))
-            cid = mock.get("capability_id")
-            variant = mock.get("variant")
-            if cid and variant:
-                mocks[(cid, variant)] = mock
-    return mocks
+    if not scenario_id:
+        return None
+    path = Path(project_dir) / "tests" / "scenarios" / f"{scenario_id}.scenario.json"
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
-def make_dispatcher(mocks, name_map, mock_bindings):
-    """Build a dispatcher fn: (capability_name, params) -> (result, error).
+def scenario_vars_to_tempfile(scenario):
+    """Write the scenario's vars to a temp JSON file and return its path.
 
-    - mocks: {(capability_id, variant): mock dict} from load_mocks.
-    - name_map: {capability_name -> capability_id} from name_to_id.
-    - mock_bindings: {capability_id: variant} chosen for this run. A binding may
-      also be keyed by capability_name for convenience; both are accepted.
-
-    Resolution: map the called tool name -> capability id, pick the bound
-    variant (or the lone variant if exactly one exists for that id), then return
-    its result (behavior.returns) or its error string (behavior.error). On any
-    miss we return a soft error rather than raising, so the agent loop can keep
-    going and the failure shows up in the transcript.
+    compile_spec takes a --vars-file path; scenarios inline their vars, so
+    we materialize them to a temp file at the boundary. Returns None when
+    the scenario has no vars.
     """
-    bindings = dict(mock_bindings or {})
+    if not scenario:
+        return None
+    vars_dict = scenario.get("vars")
+    if not vars_dict:
+        return None
+    import tempfile
+    fd, path = tempfile.mkstemp(prefix="scenario-vars-", suffix=".json")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(vars_dict, f)
+    return path
 
-    # Pre-index the variants available per capability id, so we can default to
-    # the single variant when a test didn't bind one explicitly.
-    variants_by_cap: dict[str, list[str]] = {}
-    for (cid, variant) in mocks.keys():
-        variants_by_cap.setdefault(cid, []).append(variant)
+
+def make_dispatcher_from_scenario(scenario, name_map):
+    """Build a dispatcher fn from a scenario's mocks dict.
+
+    Scenario.mocks maps capability_id -> behavior ({kind, returns|error}).
+    The dispatcher resolves the called tool name -> id -> behavior and
+    returns (result, error). Caps not in the scenario yield a soft error
+    so the agent loop can keep going and the miss shows up in the transcript.
+    """
+    mocks = (scenario or {}).get("mocks", {}) or {}
 
     def dispatch(capability_name, params):
         cid = name_map.get(capability_name, capability_name)
-
-        variant = bindings.get(cid) or bindings.get(capability_name)
-        if variant is None:
-            avail = variants_by_cap.get(cid, [])
-            if len(avail) == 1:
-                variant = avail[0]
-            elif not avail:
-                return None, f"no mock registered for capability '{cid}'"
-            else:
-                return None, (
-                    f"no mock_binding for '{cid}'; choose one of {sorted(avail)}"
-                )
-
-        mock = mocks.get((cid, variant))
-        if mock is None:
-            return None, f"no mock '{cid}.{variant}'"
-
-        behavior = mock.get("behavior", {})
+        behavior = mocks.get(cid)
+        if behavior is None:
+            return None, f"no mock for capability '{cid}' in this scenario"
         kind = behavior.get("kind")
         if kind == "error":
             return None, str(behavior.get("error", "mock error"))
-        # "static" (and anything else with returns) -> structured result.
         return behavior.get("returns", {}), None
 
     return dispatch

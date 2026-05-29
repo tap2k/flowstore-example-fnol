@@ -1,9 +1,0 @@
-{
-  "$schema": "flowstore://test/mock/v0",
-  "capability_id": "cap_log_no_file",
-  "variant": "success",
-  "behavior": {
-    "kind": "static",
-    "returns": { "ok": true }
-  }
-}

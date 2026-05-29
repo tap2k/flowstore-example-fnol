@@ -8,30 +8,43 @@
     {
       "user_input": "Everyone's fine and I'm pulled over safely off the road.",
       "expected_class": "to_identify",
-      "must_not_contain": ["911"],
+      "must_not_contain": [
+        "911"
+      ],
       "notes": "on_scene_safe true, no injuries -> xp_st_to_identify."
     },
     {
       "user_input": "My passenger's leg is broken and there's a lot of blood.",
       "expected_class": "to_defer",
-      "must_contain": ["911"],
-      "must_not_contain": ["policy number"],
+      "must_contain": [
+        "911"
+      ],
+      "must_not_contain": [
+        "policy number"
+      ],
       "notes": "injury_severity serious -> xp_st_to_defer; never ask for a policy number first."
     },
     {
       "user_input": "I'm dizzy and I'm still sitting in the middle of the road.",
       "expected_class": "to_defer",
-      "must_contain": ["911"],
+      "must_contain": [
+        "911"
+      ],
       "notes": "on_scene_safe false -> xp_st_to_defer."
     },
     {
       "user_input": "Everyone's okay, just a little shaken up.",
       "expected_class": "to_identify",
-      "must_not_contain": ["911"],
+      "must_not_contain": [
+        "911"
+      ],
       "notes": "okay + implicitly safe -> proceed to intake."
     }
   ],
   "model": "gemini-2.5-flash",
   "language": "en-US",
-  "tags": ["routing", "safety-triage"]
+  "tags": [
+    "routing",
+    "safety-triage"
+  ]
 }

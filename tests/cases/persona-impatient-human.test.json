@@ -4,15 +4,22 @@
   "name": "Caller demands a human — persona-driven handoff",
   "notes": "Persona-driven: the impatient-wants-human persona asks for a person early and holds the line. Tests that int_human_handoff triggers promptly, fires cap_transfer_to_human, and the agent doesn't argue or stall.",
   "persona_id": "impatient-wants-human",
-  "mock_bindings": {
-    "cap_transfer_to_human": "success"
-  },
-  "evaluators": ["empathy_maintained"],
+  "scenario_id": "persona-impatient-human",
+  "evaluators": [
+    "empathy_maintained"
+  ],
   "transcript_assertions": [
-    { "kind": "must_terminate_within", "max_turns": 8 }
+    {
+      "kind": "must_terminate_within",
+      "max_turns": 8
+    }
   ],
   "max_turns": 8,
   "model": "gemini-2.5-flash",
   "language": "en-US",
-  "tags": ["persona", "handoff", "interrupt"]
+  "tags": [
+    "persona",
+    "handoff",
+    "interrupt"
+  ]
 }

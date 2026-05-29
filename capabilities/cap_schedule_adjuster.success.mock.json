@@ -1,9 +1,0 @@
-{
-  "$schema": "flowstore://test/mock/v0",
-  "capability_id": "cap_schedule_adjuster",
-  "variant": "success",
-  "behavior": {
-    "kind": "static",
-    "returns": { "ok": true }
-  }
-}

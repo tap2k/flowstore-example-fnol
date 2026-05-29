@@ -1,0 +1,13 @@
+{
+  "$schema": "flowstore://test/scenario/v0",
+  "id": "persona-impatient-human",
+  "name": "Caller demands a human — persona-driven handoff",
+  "mocks": {
+    "cap_transfer_to_human": {
+      "kind": "static",
+      "returns": {
+        "ok": true
+      }
+    }
+  }
+}

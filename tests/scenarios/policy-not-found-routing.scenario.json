@@ -1,0 +1,27 @@
+{
+  "$schema": "flowstore://test/scenario/v0",
+  "id": "policy-not-found-routing",
+  "name": "Policy-not-found: route on how the caller responds",
+  "mocks": {
+    "cap_verify_policy": {
+      "kind": "static",
+      "returns": {
+        "policy_active": false,
+        "deductible_amount": null,
+        "named_drivers": ""
+      }
+    },
+    "cap_transfer_to_human": {
+      "kind": "static",
+      "returns": {
+        "ok": true
+      }
+    },
+    "cap_log_no_file": {
+      "kind": "static",
+      "returns": {
+        "ok": true
+      }
+    }
+  }
+}

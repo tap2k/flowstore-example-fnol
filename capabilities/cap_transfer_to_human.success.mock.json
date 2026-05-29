@@ -1,9 +1,0 @@
-{
-  "$schema": "flowstore://test/mock/v0",
-  "capability_id": "cap_transfer_to_human",
-  "variant": "success",
-  "behavior": {
-    "kind": "static",
-    "returns": { "ok": true }
-  }
-}

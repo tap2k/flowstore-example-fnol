@@ -198,8 +198,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     # --- SDK + harness internals imported only after arg parsing -----------
-    from _agent import (default_model, load_mocks, make_client, make_dispatcher,
-                        name_to_id, resolve_paths, Conversation)
+    from _agent import (default_model, load_scenario, make_client,
+                        make_dispatcher_from_scenario, name_to_id,
+                        resolve_paths, scenario_vars_to_tempfile, Conversation)
     from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
@@ -209,9 +210,12 @@ def main(argv=None):
     project_dir = resolve_paths(case_path)
 
     language = args.language or case.get("language")
-    vars_file = args.vars_file or case.get("vars_file")
+    scenario = load_scenario(project_dir, case.get("scenario_id"))
+    vars_file = args.vars_file
     if vars_file:
         vars_file = str(Path(vars_file).resolve())
+    elif scenario:
+        vars_file = scenario_vars_to_tempfile(scenario)
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
         project_dir, language=language, vars_file=vars_file,
@@ -221,8 +225,7 @@ def main(argv=None):
 
     model = case.get("model") or default_model(project_dir)
     name_map = name_to_id(agent_dict, project_dir=project_dir)
-    mocks = load_mocks(project_dir)
-    dispatcher = make_dispatcher(mocks, name_map, case.get("mock_bindings"))
+    dispatcher = make_dispatcher_from_scenario(scenario, name_map)
 
     client = make_client()
     convo = Conversation(client, model, system_prompt, tool_schemas,

@@ -11,17 +11,30 @@
     "Yeah, try that.",
     "Okay, a person is fine."
   ],
-  "mock_bindings": {
-    "cap_verify_policy": "not_found",
-    "cap_transfer_to_human": "success"
-  },
+  "scenario_id": "policy-not-found-retry",
   "transcript_assertions": [
-    { "kind": "regex", "pattern": "NW-\\d{4}-\\d{6}", "must_appear": false },
-    { "kind": "regex", "pattern": "\\{[a-zA-Z_][a-zA-Z0-9_]*\\}", "must_appear": false }
+    {
+      "kind": "regex",
+      "pattern": "NW-\\d{4}-\\d{6}",
+      "must_appear": false
+    },
+    {
+      "kind": "regex",
+      "pattern": "\\{[a-zA-Z_][a-zA-Z0-9_]*\\}",
+      "must_appear": false
+    }
   ],
-  "evaluators": ["empathy_maintained", "tool_calls_check"],
+  "evaluators": [
+    "empathy_maintained",
+    "tool_calls_check"
+  ],
   "gold_id": "policy_not_found",
   "model": "gemini-2.5-flash",
   "language": "en-US",
-  "tags": ["sad", "policy-not-found", "escalation", "src:gold:policy_not_found"]
+  "tags": [
+    "sad",
+    "policy-not-found",
+    "escalation",
+    "src:gold:policy_not_found"
+  ]
 }

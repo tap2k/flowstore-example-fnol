@@ -1,9 +1,0 @@
-{
-  "$schema": "flowstore://test/mock/v0",
-  "capability_id": "cap_file_claim",
-  "variant": "system_error",
-  "behavior": {
-    "kind": "error",
-    "error": "claims_backend_unavailable: 503"
-  }
-}

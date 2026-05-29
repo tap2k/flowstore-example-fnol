@@ -13,22 +13,43 @@
     "Yes, that all sounds right.",
     "Yes, please get me a person."
   ],
-  "mock_bindings": {
-    "cap_verify_policy": "active",
-    "cap_file_claim": "system_error",
-    "cap_transfer_to_human": "success"
-  },
+  "scenario_id": "filing-system-error",
   "transcript_assertions": [
-    { "kind": "regex", "pattern": "NW-\\d{4}-\\d{6}", "must_appear": false },
-    { "kind": "regex", "pattern": "claim\\s+NW", "must_appear": false }
+    {
+      "kind": "regex",
+      "pattern": "NW-\\d{4}-\\d{6}",
+      "must_appear": false
+    },
+    {
+      "kind": "regex",
+      "pattern": "claim\\s+NW",
+      "must_appear": false
+    }
   ],
   "capability_assertions": [
-    { "capability": "cap_verify_policy", "invoked": true },
-    { "capability": "cap_file_claim", "invoked": true },
-    { "capability": "cap_transfer_to_human", "invoked": true }
+    {
+      "capability": "cap_verify_policy",
+      "invoked": true
+    },
+    {
+      "capability": "cap_file_claim",
+      "invoked": true
+    },
+    {
+      "capability": "cap_transfer_to_human",
+      "invoked": true
+    }
   ],
-  "evaluators": ["no_premium_speculation", "regex_match", "tool_calls_check"],
+  "evaluators": [
+    "no_premium_speculation",
+    "regex_match",
+    "tool_calls_check"
+  ],
   "model": "gemini-2.5-flash",
   "language": "en-US",
-  "tags": ["robustness", "capability-error", "no-fabrication"]
+  "tags": [
+    "robustness",
+    "capability-error",
+    "no-fabrication"
+  ]
 }

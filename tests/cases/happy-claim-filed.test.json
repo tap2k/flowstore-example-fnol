@@ -15,32 +15,64 @@
     "This number's fine, five five five one two one two.",
     "As soon as possible."
   ],
-  "mock_bindings": {
-    "cap_verify_policy": "active",
-    "cap_file_claim": "success",
-    "cap_schedule_adjuster": "success"
-  },
+  "scenario_id": "es-happy-claim",
   "assertions": [
     {
       "turn": 1,
-      "must_contain": ["safe"],
-      "must_not_contain": ["policy number", "what happened"]
+      "must_contain": [
+        "safe"
+      ],
+      "must_not_contain": [
+        "policy number",
+        "what happened"
+      ]
     }
   ],
   "transcript_assertions": [
-    { "kind": "regex", "pattern": "\\{[a-zA-Z_][a-zA-Z0-9_]*\\}", "must_appear": false },
-    { "kind": "substring", "pattern": "NW-2026-018472", "must_appear": true },
-    { "kind": "substring", "pattern": "adjuster", "must_appear": true },
-    { "kind": "count", "pattern": "911", "max_occurrences": 0 }
+    {
+      "kind": "regex",
+      "pattern": "\\{[a-zA-Z_][a-zA-Z0-9_]*\\}",
+      "must_appear": false
+    },
+    {
+      "kind": "substring",
+      "pattern": "NW-2026-018472",
+      "must_appear": true
+    },
+    {
+      "kind": "substring",
+      "pattern": "adjuster",
+      "must_appear": true
+    },
+    {
+      "kind": "count",
+      "pattern": "911",
+      "max_occurrences": 0
+    }
   ],
   "state_assertions": [
-    { "variable": "claim_status", "equals": "filed" },
-    { "variable": "claim_id", "is_set": true }
+    {
+      "variable": "claim_status",
+      "equals": "filed"
+    },
+    {
+      "variable": "claim_id",
+      "is_set": true
+    }
   ],
   "capability_assertions": [
-    { "capability": "cap_verify_policy", "invoked": true },
-    { "capability": "cap_file_claim", "invoked": true },
-    { "capability": "cap_schedule_adjuster", "invoked": true }
+    {
+      "capability": "cap_verify_policy",
+      "invoked": true
+    },
+    {
+      "capability": "cap_file_claim",
+      "invoked": true
+    },
+    {
+      "capability": "cap_schedule_adjuster",
+      "invoked": true
+    }
   ],
   "evaluators": [
     "regex_match",
@@ -53,5 +85,9 @@
   "gold_id": "happy_claim_filed",
   "model": "gemini-2.5-flash",
   "language": "en-US",
-  "tags": ["happy", "claim-filed", "src:gold:happy_claim_filed"]
+  "tags": [
+    "happy",
+    "claim-filed",
+    "src:gold:happy_claim_filed"
+  ]
 }

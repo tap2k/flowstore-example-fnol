@@ -10,14 +10,23 @@
     "Got it. And will this make my premium go up?",
     "Okay, let's keep going with the claim."
   ],
-  "mock_bindings": {
-    "cap_verify_policy": "active"
-  },
+  "scenario_id": "coverage-question-interrupt",
   "transcript_assertions": [
-    { "kind": "substring", "pattern": "adjuster", "must_appear": true }
+    {
+      "kind": "substring",
+      "pattern": "adjuster",
+      "must_appear": true
+    }
   ],
-  "evaluators": ["no_premium_speculation", "empathy_maintained"],
+  "evaluators": [
+    "no_premium_speculation",
+    "empathy_maintained"
+  ],
   "model": "gemini-2.5-flash",
   "language": "en-US",
-  "tags": ["interrupt", "coverage", "no-speculation"]
+  "tags": [
+    "interrupt",
+    "coverage",
+    "no-speculation"
+  ]
 }

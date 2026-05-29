@@ -95,8 +95,9 @@ def main(argv=None):
     parser.add_argument("--vars-file", default=None)
     args = parser.parse_args(argv)
 
-    from _agent import (default_model, load_mocks, make_client, make_dispatcher,
-                        name_to_id, resolve_paths)
+    from _agent import (default_model, load_scenario, make_client,
+                        make_dispatcher_from_scenario, name_to_id,
+                        resolve_paths, scenario_vars_to_tempfile)
     from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
@@ -112,9 +113,12 @@ def main(argv=None):
     persona_prompt = persona.get("system_prompt", "")
 
     language = args.language or case.get("language")
-    vars_file = args.vars_file or case.get("vars_file")
+    scenario = load_scenario(project_dir, case.get("scenario_id"))
+    vars_file = args.vars_file
     if vars_file:
         vars_file = str(Path(vars_file).resolve())
+    elif scenario:
+        vars_file = scenario_vars_to_tempfile(scenario)
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
         project_dir, language=language, vars_file=vars_file,
@@ -129,7 +133,6 @@ def main(argv=None):
     max_turns = case.get("max_turns") or DEFAULT_MAX_TURNS
 
     name_map = name_to_id(agent_dict, project_dir=project_dir)
-    mocks = load_mocks(project_dir)
     client = make_client()
 
     gold = None
@@ -163,7 +166,7 @@ def main(argv=None):
     last_convo = None
     last_evals = []
     for _ in range(max(1, args.trials)):
-        dispatcher = make_dispatcher(mocks, name_map, case.get("mock_bindings"))
+        dispatcher = make_dispatcher_from_scenario(scenario, name_map)
         convo = run_trial(client, agent_model, persona_model, system_prompt,
                          tool_schemas, dispatcher, name_map, persona_prompt,
                          max_turns)

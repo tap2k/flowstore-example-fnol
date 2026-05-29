@@ -1,0 +1,15 @@
+{
+  "$schema": "flowstore://test/scenario/v0",
+  "id": "coverage-question-interrupt",
+  "name": "Caller asks a coverage question mid-intake (policy-question interrupt)",
+  "mocks": {
+    "cap_verify_policy": {
+      "kind": "static",
+      "returns": {
+        "policy_active": true,
+        "deductible_amount": 500,
+        "named_drivers": "Casey Lin, Pat Lin"
+      }
+    }
+  }
+}

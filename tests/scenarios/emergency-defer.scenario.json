@@ -1,0 +1,13 @@
+{
+  "$schema": "flowstore://test/scenario/v0",
+  "id": "emergency-defer",
+  "name": "Serious injury reported — agent defers to 911 and offers callback",
+  "mocks": {
+    "cap_schedule_adjuster": {
+      "kind": "static",
+      "returns": {
+        "ok": true
+      }
+    }
+  }
+}

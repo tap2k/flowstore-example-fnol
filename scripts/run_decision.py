@@ -62,8 +62,9 @@ def main(argv=None):
     parser.add_argument("--vars-file", default=None)
     args = parser.parse_args(argv)
 
-    from _agent import (default_model, load_mocks, make_client,
-                        make_dispatcher, name_to_id, resolve_paths, Conversation)
+    from _agent import (default_model, load_scenario, make_client,
+                        make_dispatcher_from_scenario, name_to_id,
+                        resolve_paths, scenario_vars_to_tempfile, Conversation)
     from _compile import compile_prompt
     from _eval import eval_capability_assertions, load_json
 
@@ -72,9 +73,12 @@ def main(argv=None):
     project_dir = resolve_paths(dec_path)
 
     language = args.language or dec.get("language")
-    vars_file = args.vars_file or dec.get("vars_file")
+    scenario = load_scenario(project_dir, dec.get("scenario_id"))
+    vars_file = args.vars_file
     if vars_file:
         vars_file = str(Path(vars_file).resolve())
+    elif scenario:
+        vars_file = scenario_vars_to_tempfile(scenario)
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
         project_dir, language=language, vars_file=vars_file,
@@ -83,14 +87,13 @@ def main(argv=None):
 
     model = dec.get("model") or default_model(project_dir)
     name_map = name_to_id(agent_dict, project_dir=project_dir)
-    mocks = load_mocks(project_dir)
     client = make_client()
 
     prefix_turns = dec.get("prefix_turns", []) or []
     branches_out = []
     for branch in dec.get("branches", []) or []:
         # Fresh conversation per branch so they don't bleed into each other.
-        dispatcher = make_dispatcher(mocks, name_map, dec.get("mock_bindings"))
+        dispatcher = make_dispatcher_from_scenario(scenario, name_map)
         convo = Conversation(client, model, system_prompt, tool_schemas,
                             dispatcher, name_map)
         convo.agent_reply(None)            # implicit opening agent turn

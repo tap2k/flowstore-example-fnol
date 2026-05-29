@@ -12,39 +12,60 @@
     {
       "user_input": "Oh wait, maybe it's one two three four six?",
       "expected_class": "retry",
-      "must_not_contain": ["claim NW"],
+      "must_not_contain": [
+        "claim NW"
+      ],
       "capability_assertions": [
-        { "capability": "cap_verify_policy", "invoked": true }
+        {
+          "capability": "cap_verify_policy",
+          "invoked": true
+        }
       ],
       "notes": "corrected number -> xp_pnf_retry back to flow_identify, which re-invokes cap_verify_policy with the new number."
     },
     {
       "user_input": "Just put me through to a real person, please.",
       "expected_class": "human",
-      "must_not_contain": ["claim NW", "try the number again"],
+      "must_not_contain": [
+        "claim NW",
+        "try the number again"
+      ],
       "capability_assertions": [
-        { "capability": "cap_transfer_to_human", "invoked": true },
-        { "capability": "cap_log_no_file", "invoked": false }
+        {
+          "capability": "cap_transfer_to_human",
+          "invoked": true
+        },
+        {
+          "capability": "cap_log_no_file",
+          "invoked": false
+        }
       ],
       "notes": "wants a person -> xp_pnf_human fires cap_transfer_to_human. The transfer is often a silent tool call with no narration, so capability_assertions are the primary verdict here; the substring check just guards against fabricated claim ids or further number-looping."
     },
     {
       "user_input": "You know what, forget it, I'll call back later.",
       "expected_class": "giveup",
-      "must_not_contain": ["claim NW"],
+      "must_not_contain": [
+        "claim NW"
+      ],
       "capability_assertions": [
-        { "capability": "cap_log_no_file", "invoked": true },
-        { "capability": "cap_transfer_to_human", "invoked": false }
+        {
+          "capability": "cap_log_no_file",
+          "invoked": true
+        },
+        {
+          "capability": "cap_transfer_to_human",
+          "invoked": false
+        }
       ],
       "notes": "gives up -> xp_pnf_giveup, fires cap_log_no_file (and NOT cap_transfer_to_human)."
     }
   ],
-  "mock_bindings": {
-    "cap_verify_policy": "not_found",
-    "cap_transfer_to_human": "success",
-    "cap_log_no_file": "success"
-  },
   "model": "gemini-2.5-flash",
   "language": "en-US",
-  "tags": ["routing", "policy-not-found"]
+  "tags": [
+    "routing",
+    "policy-not-found"
+  ],
+  "scenario_id": "policy-not-found-routing"
 }
