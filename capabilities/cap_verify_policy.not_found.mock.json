@@ -2,7 +2,6 @@
   "$schema": "flowstore://test/mock/v0",
   "capability_id": "cap_verify_policy",
   "variant": "not_found",
-  "description": "No active policy matches the caller. policy_active=false drives route_verified into flow_policy_not_found.",
   "behavior": {
     "kind": "static",
     "returns": {

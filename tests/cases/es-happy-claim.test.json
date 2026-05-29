@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/case/v0",
   "id": "es-happy-claim",
   "name": "Reclamación en español — ruta feliz (es-US)",
-  "description": "Multilingual case: language es-US makes the runner compile the Spanish prompt (flowstore-compile --language es-US). The caller speaks Spanish through a straightforward happy path; the agent must respond in Spanish and reach a filed claim.",
+  "notes": "Multilingual case: language es-US makes the runner compile the Spanish prompt (flowstore-compile --language es-US). The caller speaks Spanish through a straightforward happy path; the agent must respond in Spanish and reach a filed claim.",
   "user_turns": [
     "Sí, todos estamos bien, estoy en un lugar seguro.",
     "Casey Lin, póliza tres cero nueve ocho ocho uno dos.",

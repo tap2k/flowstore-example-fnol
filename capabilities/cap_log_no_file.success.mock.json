@@ -2,7 +2,6 @@
   "$schema": "flowstore://test/mock/v0",
   "capability_id": "cap_log_no_file",
   "variant": "success",
-  "description": "No-file audit entry written. Side-effect only; no declared outputs.",
   "behavior": {
     "kind": "static",
     "returns": { "ok": true }

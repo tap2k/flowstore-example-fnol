@@ -7,18 +7,15 @@ adjuster callback.
 
 This is the **exhaustive** flowstore example: it exercises every flow type, the full
 file-model decomposition, multilingual scripts, every capability shape, and every test
-type — with a self-contained Python harness that runs them. It's a standalone flowstore
-project — it compiles and tests against any flowstore checkout via the
-`FLOWSTORE_COMPILE_CMD` override (see below); references to a native "runner" are kept
-generic throughout.
+type — with a self-contained Python harness that runs them. The harness compiles and
+tests against any flowstore checkout via `FLOWSTORE_COMPILE_CMD` (see below).
 
 `fnol.txt` is the original plain-language design narrative the spec was authored from —
 kept for context; nothing loads it.
 
-There are two ways to use this example: **open it in the editor** to explore the spec on
-a canvas (no install — start here), or **compile and test it from the command line** (the
-harness sections further down). They're independent; the editor needs nothing from the
-CLI side.
+There are two ways to use this example: **open it in the editor** to explore or modify
+the spec on a canvas (no install — start here), or **drive the test harness from the
+command line** (further down).
 
 ---
 
@@ -27,7 +24,7 @@ CLI side.
 The fastest way to see this agent is the hosted editor at
 [create.flowstore.org](https://create.flowstore.org) — nothing to install; it runs in your
 browser and autosaves to `localStorage`. Loading and browsing the spec needs no account and
-no API key (only **Run**/simulate calls an LLM).
+no API key (only **Run**/simulate and the **Assistant** call an LLM).
 
 **Load it — open from GitHub (recommended).** This path round-trips: you can **Save** edits
 straight back to the repo, so it's the one you'll keep using as you work.
@@ -90,6 +87,38 @@ assigns use one of three **methods**: `llm` (semantic judgment), `calculation` (
 Python-like expression over variables), or `direct` (a literal value). **Export** is
 deterministic codegen — the spec flattens into one system prompt plus tool schemas you can
 paste into any LLM runtime, which is also what the simulator runs against.
+
+---
+
+## Build a spec from existing material
+
+`prompts/AGENT-SPEC-PROMPT.txt` is the LLM prompt that converts raw source material — an
+existing system prompt, a process doc, a script spreadsheet, a Figma flow export, call
+transcripts, PDFs — into a flowstore v0 spec (one canonical JSON object). Use it when
+you're starting from existing artifacts rather than authoring on the canvas from scratch.
+
+Two ways to run it — either works:
+
+**In the editor.** Open the Assistant (sparkles button) at
+[create.flowstore.org](https://create.flowstore.org), click **Attach** to drop your source
+files (text formats: `.txt`, `.md`, `.json`, `.yaml`, `.csv` — copy the text out of PDF /
+Word first), then click **Build from source**. The Assistant runs `AGENT-SPEC-PROMPT.txt`
+against your configured LLM, validates the result against the v0 schema, and loads it onto
+the canvas, replacing the current spec after a confirm. Needs an LLM key in **Settings**.
+
+**External round-trip.** No LLM key configured in the editor, or want to use a model the
+editor doesn't speak to:
+
+1. Open `prompts/AGENT-SPEC-PROMPT.txt`. It instructs an LLM to read your material and
+   emit a v0 spec as a single JSON object.
+2. Paste that prompt plus your source material into any LLM (Claude, GPT, Gemini). Copy
+   the JSON it returns.
+3. In the editor, click the **Import** icon, paste the JSON, and **Parse & import**. The
+   import is a mechanical, schema-validated parse — no LLM runs in the editor — so a
+   malformed object is rejected with errors rather than silently loaded.
+
+After import, refine on the canvas — the Assistant and manual editing operate on the same
+spec.
 
 ---
 
@@ -168,7 +197,7 @@ Every `.json` carries a `$schema` URI and is validated on load.
 |---|---|
 | Scripted case + per-turn `assertions` | `tests/cases/happy-claim-filed`, `emergency-defer` |
 | `transcript_assertions` (substring/regex/count/terminate) | most cases |
-| `state_assertions` (final variable scope) | `happy-claim-filed` (needs a native runner — see notes) |
+| `state_assertions` (final variable scope) | `happy-claim-filed` (runtime-only — see notes) |
 | Gold standard + `gold_id` | `tests/gold/*` ← `happy-claim-filed`, `emergency-defer`, `policy-not-found-retry` |
 | `vars_file` (pre-populated context) | `happy-known-caller` ← `tests/vars/vars.known-caller.json` |
 | Persona-driven case (LLM-as-user) | `tests/cases/persona-*` ← `tests/personas/*` |
@@ -206,11 +235,13 @@ clear hint if it's unset.
 `prompts/GOLD-EXTRACTION-PROMPT.txt` is the authoring prompt for turning real source
 material (call transcripts, scripts, docs) into the `tests/gold/*.gold.json` records here.
 
+---
+
 ## Run the tests
 
-The harness drives the **compiled prompt** with Gemini — self-contained, no native runner
-required. (A deployed flowstore runner could be wired in as another target; the file shapes
-are runner-neutral.)
+The harness drives the **compiled prompt** with Gemini. Some spec features are runtime-only
+(variable scope, exit-path `actions`, `retrieve_on_turn`) — those don't execute under this
+prompt-target setup; see Notes below for what that means in practice.
 
 ```bash
 python3 -m venv .venv && ./.venv/bin/pip install -r scripts/requirements.txt
@@ -227,10 +258,11 @@ export FLOWSTORE_COMPILE_CMD="npm --prefix /path/to/flowstore -w @flowstore/core
 ./.venv/bin/python scripts/run_persona.py tests/cases/persona-panicking.test.json
 ```
 
-> `state_assertions` (and the `state_check` evaluator) report "needs a native runner" under
-> this prompt-target harness — it doesn't track variable scope, so `final_variables` is
-> empty. Likewise, exit-path `actions` and `retrieve_on_turn` are runner-executed; the
-> prompt target exercises conversational behavior and the capability *calls* the model makes.
+> `state_assertions` (and the `state_check` evaluator) report "needs runtime variable scope"
+> here — the prompt-target harness doesn't track a variable bag (the LLM does it implicitly),
+> so `final_variables` stays empty. Exit-path `actions` and `retrieve_on_turn` are also
+> runtime-only; this target exercises conversational behavior and the capability *calls* the
+> model makes.
 
 Each run writes `tests/runs/<timestamp>-<label>/<id>.result.json` (`flowstore://run/result/v0`).
 Gemini is the default driver to match the rest of the repo; the file shapes are
@@ -240,14 +272,13 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
 
 ## Notes
 
-- **`retrieve_on_turn` is a runtime behavior.** `cap_lookup_coverage` fires pre-LLM under a
-  native runner and injects a *Retrieved context* block. The prompt-target harness here
-  doesn't execute it, so `coverage-question-interrupt` answers from the FAQ alone — the
-  feature is fully declared in the spec and exercised by a runner.
-- **`state_assertions` need variable scope.** This prompt-target harness doesn't track a
-  variable bag (the LLM does it implicitly), so `final_variables` is empty and
-  `state_assertions` report "needs a native runner." The assertion *shape* is demonstrated;
-  a runner populates it.
+- **`retrieve_on_turn`** is a runtime behavior — `cap_lookup_coverage` would fire pre-LLM
+  and inject a *Retrieved context* block. The prompt-target harness doesn't do that, so
+  `coverage-question-interrupt` answers from the FAQ alone. The feature is fully declared
+  in the spec.
+- **`state_assertions`** need variable scope. The prompt-target harness doesn't track a
+  variable bag (the LLM does it implicitly), so `final_variables` stays empty. The
+  assertion *shape* is demonstrated.
 - **`vars_file` matters most for pre-context agents.** fnol captures almost everything live,
   so `happy-known-caller` only shows the injection mechanism (a caller pre-authenticated in
   the app). Outbound agents lean on it far more.
@@ -265,6 +296,8 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
 - [`prompts/GOLD-EXTRACTION-PROMPT.txt`](prompts/GOLD-EXTRACTION-PROMPT.txt) — the LLM prompt that turns source material (transcripts, scripts, docs) into `tests/gold/*.gold.json` records.
 
 **New to flowstore?** It's a behavioral spec format for conversational agents — a graph of *flows* connected by *exit paths*, decomposed into per-concern files in a Git repo (what you see here). The authoritative spec data model is [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md) and the on-disk layout is [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md), both in the [flowstore](https://github.com/tap2k/flowstore) repo; this project is a worked instance of both.
+
+---
 
 ## License
 

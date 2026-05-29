@@ -2,7 +2,6 @@
   "$schema": "flowstore://test/mock/v0",
   "capability_id": "cap_lookup_coverage",
   "variant": "standard",
-  "description": "Generic coverage summary for a standard auto policy. Grounds the policy-question interrupt's answers without quoting per-policy dollar amounts.",
   "behavior": {
     "kind": "static",
     "returns": {

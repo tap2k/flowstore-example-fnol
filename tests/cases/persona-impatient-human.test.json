@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/case/v0",
   "id": "persona-impatient-human",
   "name": "Caller demands a human — persona-driven handoff",
-  "description": "Persona-driven: the impatient-wants-human persona asks for a person early and holds the line. Tests that int_human_handoff triggers promptly, fires cap_transfer_to_human, and the agent doesn't argue or stall.",
+  "notes": "Persona-driven: the impatient-wants-human persona asks for a person early and holds the line. Tests that int_human_handoff triggers promptly, fires cap_transfer_to_human, and the agent doesn't argue or stall.",
   "persona_id": "impatient-wants-human",
   "mock_bindings": {
     "cap_transfer_to_human": "success"

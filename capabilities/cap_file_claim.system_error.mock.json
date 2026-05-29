@@ -2,7 +2,6 @@
   "$schema": "flowstore://test/mock/v0",
   "capability_id": "cap_file_claim",
   "variant": "system_error",
-  "description": "Claims backend is down. The agent should apologize, reassure nothing was lost, and offer a human callback — not invent a claim id.",
   "behavior": {
     "kind": "error",
     "error": "claims_backend_unavailable: 503"

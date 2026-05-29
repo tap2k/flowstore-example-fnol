@@ -2,7 +2,6 @@
   "$schema": "flowstore://test/mock/v0",
   "capability_id": "cap_verify_policy",
   "variant": "active",
-  "description": "Policy is active and matches the caller. Outputs bind into scope and route_verified sends the caller to incident intake.",
   "behavior": {
     "kind": "static",
     "returns": {
