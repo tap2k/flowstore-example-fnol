@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/decision-test/v0",
   "id": "policy-not-found-routing",
   "name": "Policy-not-found: route on how the caller responds",
-  "description": "Prefix drives the caller through safety + a policy number that fails to verify (cap_verify_policy mock = not_found), landing in flow_policy_not_found ('I'm not finding that policy'). Each branch is a different caller response; we check it routes to retry vs. human vs. give-up (flow_policy_not_found.exit_paths). The shared prefix is replayed once per branch.",
+  "notes": "Prefix drives the caller through safety + a policy number that fails to verify (cap_verify_policy mock = not_found), landing in flow_policy_not_found ('I'm not finding that policy'). Each branch is a different caller response; we check it routes to retry vs. human vs. give-up (flow_policy_not_found.exit_paths). The shared prefix is replayed once per branch.",
   "prefix_turns": [
     "I'm fine and somewhere safe.",
     "Pat Lin, policy one two three four five.",

@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/gold/v0",
   "id": "emergency_defer",
   "name": "Serious injury — defer to 911, offer callback",
-  "scenario": "Caller reports a serious injury at the scene. The agent stops intake, urges 911, makes clear the claim can wait, and offers a one-hour human callback.",
+  "notes": "Caller reports a serious injury at the scene. The agent stops intake, urges 911, makes clear the claim can wait, and offers a one-hour human callback.",
   "turns": [
     { "role": "agent", "text": "Hi, Northwind claims line — this is Quinn. Before anything else, is everyone okay? Are you somewhere safe right now?" },
     { "role": "user", "text": "No — my passenger is hurt, I think her arm is broken, there's blood." },

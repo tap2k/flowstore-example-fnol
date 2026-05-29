@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/gold/v0",
   "id": "happy_claim_filed",
   "name": "Happy path — claim filed and callback scheduled",
-  "scenario": "Caller is safe and unhurt, verifies an active policy, reports a rear-end collision with another party, confirms the recap, the claim is filed, and a callback is scheduled.",
+  "notes": "Caller is safe and unhurt, verifies an active policy, reports a rear-end collision with another party, confirms the recap, the claim is filed, and a callback is scheduled.",
   "turns": [
     { "role": "agent", "text": "Hi, Northwind claims line — this is Quinn. Before anything else, is everyone okay? Are you somewhere safe right now?" },
     { "role": "user", "text": "Yeah, everyone's fine. I'm pulled over on the shoulder." },

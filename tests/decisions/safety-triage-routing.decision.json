@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/decision-test/v0",
   "id": "safety-triage-routing",
   "name": "Safety triage: route on the caller's first reply",
-  "description": "Pins the conversation at the opening (the agent has just asked 'is everyone okay / are you safe'). Each branch is a different first reply; we check that injuries/unsafe-scene replies get a 911 prompt (-> flow_defer_emergency) while safe replies move to identification (-> flow_identify) with no 911. Maps to flow_safety_triage.exit_paths.",
+  "notes": "Pins the conversation at the opening (the agent has just asked 'is everyone okay / are you safe'). Each branch is a different first reply; we check that injuries/unsafe-scene replies get a 911 prompt (-> flow_defer_emergency) while safe replies move to identification (-> flow_identify) with no 911. Maps to flow_safety_triage.exit_paths.",
   "prefix_turns": [],
   "branches": [
     {

@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/gold/v0",
   "id": "policy_not_found",
   "name": "Policy can't be verified — one retry, then human",
-  "scenario": "Caller is safe, but the policy number doesn't verify. The agent re-reads it, lets the caller retry once, and when it still fails escalates to a human without looping.",
+  "notes": "Caller is safe, but the policy number doesn't verify. The agent re-reads it, lets the caller retry once, and when it still fails escalates to a human without looping.",
   "turns": [
     { "role": "agent", "text": "Hi, Northwind claims line — this is Quinn. Before anything else, is everyone okay? Are you somewhere safe right now?" },
     { "role": "user", "text": "Yeah, I'm fine, just shaken. I need to report a fender bender." },

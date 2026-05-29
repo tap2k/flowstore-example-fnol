@@ -2,7 +2,7 @@
   "$schema": "flowstore://spec/knowledge-table/v0",
   "id": "tbl_claim_types",
   "name": "Auto claim types",
-  "purpose": "Reference for the kinds of auto claims Northwind handles and which coverage they fall under. Helps the agent recognize the incident type while gathering details — it never quotes coverage decisions, which are the adjuster's call.",
+  "notes": "Reference for the kinds of auto claims Northwind handles and which coverage they fall under. Helps the agent recognize the incident type while gathering details — it never quotes coverage decisions, which are the adjuster's call.",
   "structure": [
     {
       "field": "claim_type",
