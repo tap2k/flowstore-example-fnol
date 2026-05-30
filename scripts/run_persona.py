@@ -95,9 +95,9 @@ def main(argv=None):
     parser.add_argument("--vars-file", default=None)
     args = parser.parse_args(argv)
 
-    from _agent import (default_model, load_scenario, make_client,
-                        make_dispatcher_from_scenario, name_to_id,
-                        resolve_paths, scenario_vars_to_tempfile)
+    from _agent import (default_model, load_persona, make_client,
+                        make_dispatcher_from_persona, name_to_id,
+                        resolve_paths, persona_vars_to_tempfile)
     from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
@@ -109,16 +109,17 @@ def main(argv=None):
     persona_id = case.get("persona_id")
     if not persona_id:
         parser.error("case has no persona_id; use run_scripted.py for scripted cases")
-    persona = load_json(project_dir / "tests" / "personas" / f"{persona_id}.persona.json")
+    persona = load_persona(project_dir, persona_id)
+    if not persona:
+        parser.error(f"persona {persona_id} not found in tests/personas/")
     persona_prompt = persona.get("system_prompt", "")
 
     language = args.language or case.get("language")
-    scenario = load_scenario(project_dir, case.get("scenario_id"))
     vars_file = args.vars_file
     if vars_file:
         vars_file = str(Path(vars_file).resolve())
-    elif scenario:
-        vars_file = scenario_vars_to_tempfile(scenario)
+    else:
+        vars_file = persona_vars_to_tempfile(persona)
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
         project_dir, language=language, vars_file=vars_file,
@@ -166,7 +167,7 @@ def main(argv=None):
     last_convo = None
     last_evals = []
     for _ in range(max(1, args.trials)):
-        dispatcher = make_dispatcher_from_scenario(scenario, name_map)
+        dispatcher = make_dispatcher_from_persona(persona, name_map)
         convo = run_trial(client, agent_model, persona_model, system_prompt,
                          tool_schemas, dispatcher, name_map, persona_prompt,
                          max_turns)

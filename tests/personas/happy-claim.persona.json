@@ -1,7 +1,9 @@
 {
-  "$schema": "flowstore://test/scenario/v0",
-  "id": "es-happy-claim",
-  "name": "Reclamación en español — ruta feliz (es-US)",
+  "$schema": "flowstore://test/persona/v0",
+  "id": "happy-claim",
+  "system_prompt": "",
+  "name": "Happy claim — policy active, claim files cleanly",
+  "notes": "World-only persona (no system_prompt). Mocks the happy path: cap_verify_policy returns an active policy for Casey Lin, cap_file_claim returns claim NW-2026-018472, cap_schedule_adjuster succeeds. Bound by the English and Spanish happy-path scripted cases.",
   "mocks": {
     "cap_verify_policy": {
       "kind": "static",

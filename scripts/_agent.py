@@ -69,55 +69,56 @@ def name_to_id(agent_dict, project_dir=None):
     return mapping
 
 
-def load_scenario(project_dir, scenario_id):
-    """Load tests/scenarios/<scenario_id>.scenario.json. None if not found.
+def load_persona(project_dir, persona_id):
+    """Load tests/personas/<persona_id>.persona.json. None if not found.
 
-    A scenario carries `vars` (free-form context-vars dict) and `mocks`
-    (capability_id -> {kind: static|error, returns/error}). Replaces the
-    older split of tests/vars.<name>.json + capabilities/*.mock.json.
+    A persona carries `system_prompt` + `vars` (free-form context-vars
+    dict) + `mocks` (capability_id -> {kind: static|error, returns/error}).
+    Cases bind a persona for their world; scripted cases also bind one
+    purely for vars+mocks (ignoring the persona's system_prompt).
     """
-    if not scenario_id:
+    if not persona_id:
         return None
-    path = Path(project_dir) / "tests" / "scenarios" / f"{scenario_id}.scenario.json"
+    path = Path(project_dir) / "tests" / "personas" / f"{persona_id}.persona.json"
     if not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def scenario_vars_to_tempfile(scenario):
-    """Write the scenario's vars to a temp JSON file and return its path.
+def persona_vars_to_tempfile(persona):
+    """Write the persona's vars to a temp JSON file and return its path.
 
-    compile_spec takes a --vars-file path; scenarios inline their vars, so
+    compile_spec takes a --vars-file path; personas inline their vars, so
     we materialize them to a temp file at the boundary. Returns None when
-    the scenario has no vars.
+    the persona has no vars.
     """
-    if not scenario:
+    if not persona:
         return None
-    vars_dict = scenario.get("vars")
+    vars_dict = persona.get("vars")
     if not vars_dict:
         return None
     import tempfile
-    fd, path = tempfile.mkstemp(prefix="scenario-vars-", suffix=".json")
+    fd, path = tempfile.mkstemp(prefix="persona-vars-", suffix=".json")
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(vars_dict, f)
     return path
 
 
-def make_dispatcher_from_scenario(scenario, name_map):
-    """Build a dispatcher fn from a scenario's mocks dict.
+def make_dispatcher_from_persona(persona, name_map):
+    """Build a dispatcher fn from a persona's mocks dict.
 
-    Scenario.mocks maps capability_id -> behavior ({kind, returns|error}).
+    Persona.mocks maps capability_id -> behavior ({kind, returns|error}).
     The dispatcher resolves the called tool name -> id -> behavior and
-    returns (result, error). Caps not in the scenario yield a soft error
+    returns (result, error). Caps not in the persona yield a soft error
     so the agent loop can keep going and the miss shows up in the transcript.
     """
-    mocks = (scenario or {}).get("mocks", {}) or {}
+    mocks = (persona or {}).get("mocks", {}) or {}
 
     def dispatch(capability_name, params):
         cid = name_map.get(capability_name, capability_name)
         behavior = mocks.get(cid)
         if behavior is None:
-            return None, f"no mock for capability '{cid}' in this scenario"
+            return None, f"no mock for capability '{cid}' in this persona's world"
         kind = behavior.get("kind")
         if kind == "error":
             return None, str(behavior.get("error", "mock error"))

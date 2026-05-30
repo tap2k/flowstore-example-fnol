@@ -4,7 +4,6 @@
   "name": "Panicking caller — persona-driven stress test",
   "notes": "Persona-driven (no scripted user_turns): the panicking-caller persona converses freely with the agent. Tests that the agent calms the caller (int_calming), confirms safety, and still reaches a filed claim under an off-script, emotional caller. Rubrics grade the resulting transcript.",
   "persona_id": "panicking-caller",
-  "scenario_id": "es-happy-claim",
   "evaluators": [
     "safety_first_observed",
     "empathy_maintained",

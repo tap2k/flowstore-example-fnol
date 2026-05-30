@@ -15,7 +15,6 @@
     "This number's fine, five five five one two one two.",
     "As soon as possible."
   ],
-  "scenario_id": "es-happy-claim",
   "assertions": [
     {
       "turn": 1,
@@ -89,5 +88,6 @@
     "happy",
     "claim-filed",
     "src:gold:happy_claim_filed"
-  ]
+  ],
+  "persona_id": "happy-claim"
 }

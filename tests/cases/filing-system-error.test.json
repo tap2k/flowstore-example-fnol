@@ -13,7 +13,6 @@
     "Yes, that all sounds right.",
     "Yes, please get me a person."
   ],
-  "scenario_id": "filing-system-error",
   "transcript_assertions": [
     {
       "kind": "regex",
@@ -51,5 +50,6 @@
     "robustness",
     "capability-error",
     "no-fabrication"
-  ]
+  ],
+  "persona_id": "filing-system-error"
 }

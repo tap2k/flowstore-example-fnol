@@ -1,6 +1,7 @@
 {
-  "$schema": "flowstore://test/scenario/v0",
+  "$schema": "flowstore://test/persona/v0",
   "id": "filing-system-error",
+  "system_prompt": "",
   "name": "Claims backend errors on file — agent recovers without fabricating",
   "mocks": {
     "cap_verify_policy": {

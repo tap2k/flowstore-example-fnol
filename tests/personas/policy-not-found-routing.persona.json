@@ -1,7 +1,8 @@
 {
-  "$schema": "flowstore://test/scenario/v0",
-  "id": "policy-not-found-retry",
-  "name": "Policy doesn't verify — one retry, then human escalation",
+  "$schema": "flowstore://test/persona/v0",
+  "id": "policy-not-found-routing",
+  "system_prompt": "",
+  "name": "Policy-not-found: route on how the caller responds",
   "mocks": {
     "cap_verify_policy": {
       "kind": "static",
@@ -12,6 +13,12 @@
       }
     },
     "cap_transfer_to_human": {
+      "kind": "static",
+      "returns": {
+        "ok": true
+      }
+    },
+    "cap_log_no_file": {
       "kind": "static",
       "returns": {
         "ok": true

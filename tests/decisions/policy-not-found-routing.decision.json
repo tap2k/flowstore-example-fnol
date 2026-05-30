@@ -67,5 +67,5 @@
     "routing",
     "policy-not-found"
   ],
-  "scenario_id": "policy-not-found-routing"
+  "persona_id": "policy-not-found-routing"
 }

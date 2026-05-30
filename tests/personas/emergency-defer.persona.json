@@ -1,6 +1,7 @@
 {
-  "$schema": "flowstore://test/scenario/v0",
+  "$schema": "flowstore://test/persona/v0",
   "id": "emergency-defer",
+  "system_prompt": "",
   "name": "Serious injury reported — agent defers to 911 and offers callback",
   "mocks": {
     "cap_schedule_adjuster": {

@@ -1,6 +1,7 @@
 {
-  "$schema": "flowstore://test/scenario/v0",
+  "$schema": "flowstore://test/persona/v0",
   "id": "coverage-question-interrupt",
+  "system_prompt": "",
   "name": "Caller asks a coverage question mid-intake (policy-question interrupt)",
   "mocks": {
     "cap_verify_policy": {

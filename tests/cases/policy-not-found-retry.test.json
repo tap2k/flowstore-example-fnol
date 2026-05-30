@@ -11,7 +11,6 @@
     "Yeah, try that.",
     "Okay, a person is fine."
   ],
-  "scenario_id": "policy-not-found-retry",
   "transcript_assertions": [
     {
       "kind": "regex",
@@ -36,5 +35,6 @@
     "policy-not-found",
     "escalation",
     "src:gold:policy_not_found"
-  ]
+  ],
+  "persona_id": "policy-not-found-retry"
 }

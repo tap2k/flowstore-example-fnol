@@ -10,7 +10,6 @@
     "Got it. And will this make my premium go up?",
     "Okay, let's keep going with the claim."
   ],
-  "scenario_id": "coverage-question-interrupt",
   "transcript_assertions": [
     {
       "kind": "substring",
@@ -28,5 +27,6 @@
     "interrupt",
     "coverage",
     "no-speculation"
-  ]
+  ],
+  "persona_id": "coverage-question-interrupt"
 }

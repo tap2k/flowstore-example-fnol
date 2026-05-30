@@ -13,7 +13,6 @@
     "Sí, así es.",
     "Cinco cinco cinco uno dos uno dos, lo antes posible."
   ],
-  "scenario_id": "es-happy-claim",
   "transcript_assertions": [
     {
       "kind": "regex",
@@ -37,5 +36,6 @@
     "happy",
     "multilingual",
     "es"
-  ]
+  ],
+  "persona_id": "happy-claim"
 }

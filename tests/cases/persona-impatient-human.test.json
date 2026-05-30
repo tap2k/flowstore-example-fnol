@@ -4,7 +4,6 @@
   "name": "Caller demands a human — persona-driven handoff",
   "notes": "Persona-driven: the impatient-wants-human persona asks for a person early and holds the line. Tests that int_human_handoff triggers promptly, fires cap_transfer_to_human, and the agent doesn't argue or stall.",
   "persona_id": "impatient-wants-human",
-  "scenario_id": "persona-impatient-human",
   "evaluators": [
     "empathy_maintained"
   ],
