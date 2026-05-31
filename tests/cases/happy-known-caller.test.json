@@ -1,8 +1,8 @@
 {
   "$schema": "flowstore://test/case/v0",
   "id": "happy-known-caller",
-  "name": "Pre-identified caller (vars_file seeds name + policy)",
-  "notes": "Demonstrates vars_file: the caller was authenticated in the Northwind app before transfer, so caller_name and policy_number are pre-populated into the compiled prompt. (Most fnol context is captured live; this shows the pre-context mechanism — it matters more for outbound agents. now is also seeded for stable date references.)",
+  "name": "Pre-identified caller (persona vars seed name + policy)",
+  "notes": "Demonstrates pre-context: the bound known-caller persona's vars (caller_name, policy_number, now) are seeded into the compiled prompt, as if the caller was authenticated in the Northwind app before transfer. (Most fnol context is captured live; this shows the pre-context mechanism — it matters more for outbound agents. now is also seeded for stable date references.)",
   "user_turns": [
     "Yeah, everyone's okay, I'm safe.",
     "It's still seven seven four two one zero nine.",
@@ -28,8 +28,8 @@
   "language": "en-US",
   "tags": [
     "happy",
-    "vars-file",
+    "pre-context",
     "single-vehicle"
   ],
-  "persona_id": "happy-claim"
+  "persona_id": "known-caller"
 }
