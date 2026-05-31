@@ -2,7 +2,7 @@
 
 Audience: an engineer who wants to drive a flowstore agent through tests in Python (or anything else). This is the **bring-your-own-script** path — flowstore ships file schemas and a compiler that turns a spec into a usable runtime artifact; how you drive the LLM and evaluate the transcript is up to you. This repo ships one concrete implementation of that path under `scripts/`, driven by Gemini; read it as a worked reference, not as the only shape.
 
-For *how to use this harness as a prompt-engineering development loop* (gold transcripts, A/B comparison, when to fix the spec vs the generator vs the assertions), see the sibling doc [test-driven-prompts.md](test-driven-prompts.md). This doc is the mechanics; that one is the methodology. For the project overview and feature→file map, see the [README](../README.md).
+For *how to use this harness as a prompt-engineering development loop* (gold transcripts, A/B comparison, when to fix the spec vs the generator vs the assertions), see the sibling doc [test-driven-prompts.md](test-driven-prompts.md). This doc is the mechanics; that one is the methodology. For the project overview and feature→file map, see the [README](../README.md). The data model is in [`schema/SCHEMA.md`](../schema/SCHEMA.md); the on-disk file layout in [`schema/FILE-MODEL.md`](../schema/FILE-MODEL.md).
 
 ---
 
@@ -31,7 +31,7 @@ For *how to use this harness as a prompt-engineering development loop* (gold tra
 Three things are load-bearing across the seam:
 
 1. **The flowstore compiler** produces a stable `{system_prompt, tool_schemas}` JSON. Your script drives any LLM with that. (In `scripts/_agent.py` it's invoked via the `FLOWSTORE_COMPILE_CMD` override — see [§ Compiling](#compiling-the-spec).)
-2. **Test cases** (`tests/cases/*.test.json`) define what to run; **personas** (`tests/personas/*.persona.json`) optionally define a user-side system prompt; **mocks** (`capabilities/*.mock.json`) define what capabilities return during the run.
+2. **Test cases** (`tests/cases/*.test.json`) define what to run; **personas** (`tests/personas/*.persona.json`) own the *world* a case runs in — the seeded `vars` and the per-capability `mocks` that say what each capability returns — and, optionally, a user-side `system_prompt` for LLM-as-user runs. A case binds a persona by `persona_id`.
 3. **Result files** (`tests/runs/<timestamp>-<label>/*.result.json`) are what your script writes. The shape is contract.
 
 Everything else (the evaluator set, multi-trial aggregation, gold loading, endpoint mode) is yours to write however you want. The `scripts/` here are *one* shape; not *the* shape — the provider-specific surface is isolated to a small block in `scripts/_agent.py` so you can retarget another LLM.
@@ -40,7 +40,9 @@ Everything else (the evaluator set, multi-trial aggregation, gold loading, endpo
 
 ## Compiling the spec
 
-This repo doesn't vendor the compiler — it points at a flowstore checkout through the `FLOWSTORE_COMPILE_CMD` env var, which the harness shell-splits and invokes. Set it once (see the [README](../README.md#compile) for the exact form), then:
+The no-checkout way to compile this spec to a prompt and exercise it is the editor's **prompt mode**: open the project at [create.flowstore.org](https://create.flowstore.org), click **Run** to chat against the compiled prompt, and **Export → Copy System Prompt** to pull the prompt out (see the [README](../README.md#compile--test-in-the-editor)). The sections below are for the **automated harness**, which compiles the same way under the hood.
+
+The harness invokes the `flowstore-compile` CLI through the `FLOWSTORE_COMPILE_CMD` override, which resolves the compiler wherever it lives — a flowstore checkout's workspace script today, a bare `flowstore-compile` once the published CLI is available. With it set, you can also compile by hand:
 
 ```bash
 # System prompt + tool schemas (default language, en-US):
@@ -53,7 +55,7 @@ $FLOWSTORE_COMPILE_CMD "$PWD" --format prompt --language es-US
 $FLOWSTORE_COMPILE_CMD "$PWD" --format spec
 ```
 
-Pass the project directory as an **absolute** path (`$PWD` above). The override form runs the compiler from the flowstore checkout, so a relative `.` would resolve there, not here. The test scripts resolve the project path for you before invoking the compiler (`scripts/_agent.py`, `resolve_paths` / `_run_compile`).
+Pass the project directory as an **absolute** path (`$PWD` above). The override form runs the compiler from its own location, so a relative `.` would resolve there, not here. The test scripts resolve the project path for you before invoking the compiler (`scripts/_agent.py`, `resolve_paths` / `_run_compile`).
 
 Flags the harness uses against the compiler:
 
@@ -62,7 +64,7 @@ Flags the harness uses against the compiler:
 | `--format prompt` | Emits `{system_prompt: string, tool_schemas: [...]}`. |
 | `--format spec` | Emits the resolved `{agent, flows, ...}` JSON. Same shape a runner consumes; the harness hands it to spec-aware evaluators (e.g. `tool_calls_check`). |
 | `--language <code>` | Picks the language column of the scripts (`en-US` / `es-US`). Defaults to the first declared language. |
-| `--vars-file <path.json>` | Substitutes `{k}` placeholders in the compiled prompt from a JSON key/value file. Used to seed pre-context (`tests/vars/vars.known-caller.json`). |
+| `--vars-file <path.json>` | Substitutes `{k}` placeholders in the compiled prompt from a JSON key/value file. The harness normally derives this from the bound persona's `vars` (`scripts/_agent.py` `persona_vars_to_tempfile`); the flag is a manual override for ad-hoc experiments. |
 
 Output of `--format prompt`:
 
@@ -97,7 +99,7 @@ All carry a `$schema` URI and a stable `id`. flowstore validates these on load.
 
 ### `tests/cases/<id>.test.json` — `flowstore://test/case/v0`
 
-A scripted set of user turns + which mocks to use + which evaluators to run + (optionally) which gold to compare against. The fnol cases live in `tests/cases/`; `happy-claim-filed.test.json` is the fullest one.
+A scripted set of user turns + a bound persona (the world) + which evaluators to run + (optionally) which gold to compare against. The fnol cases live in `tests/cases/`; `happy-claim-filed.test.json` is the fullest one.
 
 ```json
 {
@@ -119,38 +121,61 @@ A scripted set of user turns + which mocks to use + which evaluators to run + (o
   "state_assertions": [
     { "variable": "claim_status", "equals": "filed" }
   ],
-  "mock_bindings": {
-    "cap_verify_policy": "active",
-    "cap_file_claim": "success",
-    "cap_schedule_adjuster": "success"
-  },
+  "capability_assertions": [
+    { "capability": "cap_verify_policy", "invoked": true },
+    { "capability": "cap_file_claim", "invoked": true },
+    { "capability": "cap_schedule_adjuster", "invoked": true }
+  ],
   "evaluators": ["safety_first_observed", "no_premium_speculation", "claim_filed_correctly"],
   "gold_id": "happy_claim_filed",
+  "persona_id": "happy-claim",
   "model": "gemini-2.5-flash",
-  "language": "en-US"
+  "language": "en-US",
+  "tags": ["happy", "claim-filed", "src:gold:happy_claim_filed"]
 }
 ```
 
 Fields:
 
-- **`user_turns`** — array of strings. The agent speaks first (the spec sets `chatbot_initiates: true`), then the harness feeds these one at a time, capturing the agent's reply between turns. Mocks fire when the agent tool-calls. Omit `user_turns` and supply a `persona_id` for an LLM-as-user run instead.
+- **`user_turns`** — array of strings. The agent speaks first (the spec sets `chatbot_initiates: true`), then the harness feeds these one at a time, capturing the agent's reply between turns. Mocks (from the bound persona) fire when the agent tool-calls. Omit `user_turns` and bind a persona that carries a `system_prompt` for an LLM-as-user run instead.
 - **`assertions`** — per-turn substring checks. `turn` is **1-indexed into the agent-only subsequence** (turn 1 = the opening greeting). Each carries `must_contain` / `must_not_contain` lists, matched case-insensitively.
 - **`transcript_assertions`** — checks over the whole agent text. Four `kind`s, all implemented in `scripts/run_scripted.py`: `substring` (pattern present, or `must_appear: false` to forbid), `regex` (regex match, `must_appear` toggles), `count` (case-insensitive substring count within `min_occurrences` / `max_occurrences`), and `must_terminate_within` (dialogue ends within `max_turns` agent turns).
 - **`state_assertions`** — checks against `final_variables` (`equals` / `matches` / `is_set`). **On the compiled-prompt target these report "needs a native runner"**, because the harness doesn't track a variable bag — see [§ State assertions](#state-assertions-and-the-runner-boundary).
-- **`mock_bindings`** — map of `capability_id` → `variant`, resolving to `capabilities/<capability_id>.<variant>.mock.json` (e.g. `cap_file_claim` → `success` → `cap_file_claim.success.mock.json`). If exactly one variant exists for a capability the harness defaults to it; otherwise an unbound call returns a soft error into the transcript rather than silently passing.
+- **`capability_assertions`** — deterministic checks over `result.capability_calls[]`: `{ "capability": "<id>", "invoked": true|false }`. A green means the agent did (or didn't) fire that capability. Unlike `state_assertions`, these evaluate on **both** the compiled-prompt and runner targets — the prompt harness dispatches mocks itself and records the calls — so they're the load-bearing way to pin "filed the claim" / "transferred to a human" / "did NOT file mid-emergency" without fishing for a mock's return value in the agent's prose. `capability` is the capability **id**, not the runtime tool name; `invoked` defaults to `true`.
 - **`evaluators`** — names. Each resolves to a rubric (`tests/rubrics/<name>.rubric.json`, an LLM judge) if one exists, else a Python evaluator (`tests/evaluators/<name>.py`). This repo ships both — see [§ Evaluators](#evaluators).
-- **`persona_id`** — optional. Present (and `user_turns` absent) means it's a persona case: `run_persona.py` loads `tests/personas/<persona_id>.persona.json` and uses its `system_prompt` to drive a simulated caller. `persona-panicking` / `persona-impatient-human` / `persona-redteam-fault` are the examples.
+- **`persona_id`** — the bound persona (`tests/personas/<persona_id>.persona.json`), which supplies the **world**: seeded `vars` and per-capability `mocks`. A scripted case (with `user_turns`) binds a *world-only* persona purely for vars+mocks — its `system_prompt` is ignored. A persona-driven case omits `user_turns` and binds a persona whose `system_prompt` drives a simulated caller. `persona-panicking` / `persona-impatient-human` / `persona-redteam-fault` are the LLM-as-user examples; `happy-claim`, `policy-not-found-retry`, … are world-only.
 - **`gold_id`** — optional. Names a `tests/gold/<gold_id>.gold.json`; the harness loads it and passes it to the rubric judge as `{gold_standard}` (so `claim_filed_correctly` can compare against the reference transcript).
-- **`vars_file`** — optional path to a pre-context bundle, forwarded to the compiler's `--vars-file` (`happy-known-caller` uses `tests/vars/vars.known-caller.json`).
 - **`model`** — optional. Pins the case to a model id; falls back to `models/defaults.json` `default` (`gemini-2.5-flash`).
 - **`language`** — language code (`en-US` / `es-US`). Forwarded to the compiler's `--language`. **Required when you want the non-default language** — the spec declares two, and the compiler picks the first (en-US) unless told otherwise, so a Spanish case (`es-happy-claim`, `language: "es-US"`) must set it or its Spanish assertions silently fail against an English prompt.
 - **`max_turns`** — optional, for persona runs: the cap on agent turns (`run_persona.py` default 12).
+- **`tags`** — optional free-form labels for suite filtering. Colon-prefixed namespaces are the provenance convention (`src:gold:<id>`, `src:session:<id>`, `src:authored`); bare tags are routing buckets (`happy`, `pre-context`, …).
+
+Pre-context (a caller already identified before the call) is just a persona with a `vars` block: `happy-known-caller` binds the `known-caller` persona, whose `vars` seed `caller_name` / `policy_number` / `now` into the compiled prompt.
 
 The file's `id` should match the basename (`happy-claim-filed.test.json` → `id: "happy-claim-filed"`).
 
 ### `tests/personas/<id>.persona.json` — `flowstore://test/persona/v0`
 
-A user-side system prompt for LLM-as-user exploration. Minimal by design.
+A persona is the **world** a case runs in: seeded `vars`, per-capability `mocks`, and — only for LLM-as-user runs — a `system_prompt`. All three are optional, so the same file type serves two roles. A *world-only* persona (no `system_prompt`) is bound by scripted/decision cases purely for its vars+mocks; a *driver* persona carries a `system_prompt` that `run_persona.py` runs as a simulated caller.
+
+World-only (bound by `happy-known-caller` — seeds pre-context vars, mocks the happy path):
+
+```json
+{
+  "$schema": "flowstore://test/persona/v0",
+  "id": "known-caller",
+  "system_prompt": "",
+  "name": "Pre-identified caller — name + policy seeded before the call",
+  "vars": { "caller_name": "Jordan Reese", "policy_number": "7742109", "now": "2026-05-27" },
+  "mocks": {
+    "cap_verify_policy": { "kind": "static", "returns": { "policy_active": true, "deductible_amount": 500 } },
+    "cap_file_claim": { "kind": "static", "returns": { "claim_id": "NW-2026-018472", "estimated_callback_window": "2 hours" } },
+    "cap_schedule_adjuster": { "kind": "static", "returns": { "ok": true } }
+  }
+}
+```
+
+Driver (bound by `persona-panicking` — `system_prompt` drives the user):
 
 ```json
 {
@@ -159,45 +184,15 @@ A user-side system prompt for LLM-as-user exploration. Minimal by design.
   "name": "Shaken caller right after a crash",
   "system_prompt": "You are a Northwind auto-insurance customer who was just in a fender-bender ten minutes ago. You're rattled and a little panicky ... Name: Jordan Reese. Policy number: 7 7 4 2 1 0 9.",
   "notes": "Should trigger int_calming early, then settle into the happy intake path.",
+  "mocks": { "cap_verify_policy": { "kind": "static", "returns": { "policy_active": true } } },
   "model": null
 }
 ```
 
-`run_persona.py` runs the persona's `system_prompt` as the system instruction for a Gemini "user" that converses with the compiled agent, alternating up to `case.max_turns` agent turns. `model` (here `null`) falls back to `models/defaults.json` `roles.user_simulation`.
-
-### `capabilities/<capability_id>.<variant>.mock.json` — `flowstore://test/mock/v0`
-
-What a mocked capability returns when the agent tool-calls it during a run. fnol ships eight; here are the two shapes.
-
-Static return (`cap_file_claim.success.mock.json`):
-
-```json
-{
-  "$schema": "flowstore://test/mock/v0",
-  "capability_id": "cap_file_claim",
-  "variant": "success",
-  "behavior": {
-    "kind": "static",
-    "returns": { "claim_id": "NW-2026-018472", "estimated_callback_window": "2 hours" }
-  }
-}
-```
-
-Error (`cap_file_claim.system_error.mock.json`):
-
-```json
-{
-  "$schema": "flowstore://test/mock/v0",
-  "capability_id": "cap_file_claim",
-  "variant": "system_error",
-  "behavior": {
-    "kind": "error",
-    "error": "claims_backend_unavailable: 503"
-  }
-}
-```
-
-`kind: "static"` returns its `returns` object verbatim every call. `kind: "error"` makes the dispatcher hand the LLM the `error` string instead of a result, so the agent has to recover — that's how `filing-system-error` exercises the no-fabrication recovery in `flow_schedule_adjuster`. The filename must match `<capability_id>.<variant>` from the body; flowstore checks this on load.
+- **`vars`** — a `{name: value}` dict, coerced against `variables.json` at run time. The harness writes it to a temp file and forwards it as the compiler's `--vars-file`, so the values land as pre-context in the compiled prompt (`scripts/_agent.py` `persona_vars_to_tempfile`).
+- **`mocks`** — `{capability_id: behavior}`, where each behavior is the embedded mock-behavior shape (a sub-object, no `$schema` of its own): `{ "kind": "static", "returns": {...} }` returns its object verbatim every call, and `{ "kind": "error", "error": "..." }` hands the LLM the error string so the agent has to recover — that's how `filing-system-error`'s persona exercises the no-fabrication recovery in `flow_schedule_adjuster`. Capabilities not listed yield a soft error into the transcript (see [§ Mock dispatch](#mock-dispatch-contract)). There is no standalone mock *file* and no `variant` — one persona is one world.
+- **`system_prompt`** — optional. When present, `run_persona.py` runs it as the system instruction for a Gemini "user" that converses with the compiled agent, alternating up to `case.max_turns` agent turns. Empty/absent = world-only.
+- **`model`** (here `null`) falls back to `models/defaults.json` `roles.user_simulation`.
 
 ### `tests/rubrics/<id>.rubric.json` — `flowstore://test/rubric/v0`
 
@@ -281,7 +276,7 @@ Three entry points in `scripts/`, each taking a positional test-file path plus t
 python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json --label flowstore
 ```
 
-Compiles the prompt, builds the mock dispatcher from `mock_bindings`, drives the conversation (`scripts/_agent.py` `Conversation`), then evaluates per-turn `assertions`, `transcript_assertions`, `state_assertions`, and named `evaluators`, writing one `result.json`. Flags: `--label`, `--language`, `--system-prompt`, `--vars-file`. There is **no `--trials`** here — scripted cases run once per invocation; re-run by hand if you want repeated samples.
+Compiles the prompt (seeding the bound persona's `vars` as pre-context), builds the mock dispatcher from that persona's `mocks` (`scripts/_agent.py` `make_dispatcher_from_persona`), drives the conversation (`scripts/_agent.py` `Conversation`), then evaluates per-turn `assertions`, `transcript_assertions`, `state_assertions`, `capability_assertions`, and named `evaluators`, writing one `result.json`. Flags: `--label`, `--language`, `--system-prompt`, `--vars-file`. There is **no `--trials`** here — scripted cases run once per invocation; re-run by hand if you want repeated samples.
 
 ### `run_persona.py`
 
@@ -313,22 +308,22 @@ The minimal contract a runner satisfies is: compile → drive the LLM, dispatchi
 
 ## Mock dispatch contract
 
-Implemented in `scripts/_agent.py` (`load_mocks`, `name_to_id`, `make_dispatcher`).
+Implemented in `scripts/_agent.py` (`load_persona`, `name_to_id`, `make_dispatcher_from_persona`).
 
-- **Lookup key:** `(capability_id, variant)`. Variant comes from the case's `mock_bindings`.
-- **Single-variant default:** if a capability has exactly one mock variant on disk and the case didn't bind one, the dispatcher uses it. With multiple variants and no binding, it returns a soft error naming the choices.
-- **Unbound / unknown capability:** returns a soft error string into the transcript (the agent loop keeps going and the failure is visible) rather than raising — so a broken `mock_bindings` shows up in the result, it doesn't crash the run.
+- **Lookup key:** the capability **id**. The bound persona's `mocks` map (`{capability_id: behavior}`) is the whole world — one persona, one behavior per capability, no variants.
+- **Unbound / unknown capability:** a capability the persona's `mocks` doesn't list returns a soft error string (`"no mock for capability '<id>' in this persona's world"`) into the transcript rather than raising — so a gap in the world shows up in the result, it doesn't crash the run.
 - **Mock failure (`kind: "error"`):** the dispatcher hands the LLM `{error: "<message>"}` as the tool result. The agent sees a tool error and recovers — downstream spec branches that route on capability failure (e.g. `flow_schedule_adjuster`'s `xp_sa_filing_failed`) exercise correctly.
-- **Endpoint mode (if you build it):** `mock_bindings` would be ignored — the real endpoint provides the capability.
+- **Static return (`kind: "static"`):** the dispatcher returns the behavior's `returns` object verbatim every call.
+- **Endpoint mode (if you build it):** the persona's `mocks` would be ignored — the real endpoint provides the capability.
 
 ### `capability.id` vs `capability.name`
 
 A subtle but important distinction. Each capability declares both:
 
-- **`id`** (e.g. `cap_file_claim`) — the stable reference. Mocks key on it, `mock_bindings` key on it, filenames use it (`cap_file_claim.success.mock.json`).
+- **`id`** (e.g. `cap_file_claim`) — the stable reference. A persona's `mocks` key on it, `capability_assertions` key on it, `result.capability_calls[].capability` is it.
 - **`name`** (e.g. `file_claim`) — the snake_case **runtime dispatch identifier**. This is what the compiler emits in `tool_schemas[].name` and what the LLM returns when it tool-calls.
 
-Your script needs to translate. `name_to_id()` builds the `{name → id}` map by reading `capabilities/*.capability.json` (each declares both), and `_record_call` translates the called tool name to the id before recording it, so `result.capability_calls[].capability` is always the id. That's what lets `tool_calls_check` pivot on a stable identifier regardless of provider naming quirks.
+Your script needs to translate. `name_to_id()` builds the `{name → id}` map by reading `capabilities/*.capability.json` (each declares both), and `_record_call` translates the called tool name to the id before recording it, so `result.capability_calls[].capability` is always the id. That's what lets `tool_calls_check` and `capability_assertions` pivot on a stable identifier regardless of provider naming quirks.
 
 ---
 
@@ -364,7 +359,7 @@ Then diff `tests/runs/<ts>-flowstore/happy-claim-filed.result.json` against `tes
 
 ## Decision tests
 
-A decision test (`tests/decisions/<id>.decision.json`, `flowstore://test/decision-test/v0`) pins a conversational prefix and fans out a set of branch inputs to probe a single routing decision. `run_decision.py` replays the `prefix_turns` into a **fresh** conversation per branch, sends the branch's `user_input`, and checks the agent's immediate reply against the branch's `must_contain` / `must_not_contain`.
+A decision test (`tests/decisions/<id>.decision.json`, `flowstore://test/decision-test/v0`) pins a conversational prefix and fans out a set of branch inputs to probe a single routing decision. `run_decision.py` replays the `prefix_turns` into a **fresh** conversation per branch, sends the branch's `user_input`, and checks the agent's immediate reply against the branch's `must_contain` / `must_not_contain` and (when the routing exit fires a tool) its `capability_assertions`.
 
 ```json
 {
@@ -377,12 +372,13 @@ A decision test (`tests/decisions/<id>.decision.json`, `flowstore://test/decisio
     { "user_input": "My passenger's leg is broken and there's a lot of blood.",
       "expected_class": "to_defer", "must_contain": ["911"], "must_not_contain": ["policy number"] }
   ],
+  "persona_id": "safety-triage-routing",
   "model": "gemini-2.5-flash",
   "language": "en-US"
 }
 ```
 
-`expected_class` is recorded for information; the verdict is the `must_contain` / `must_not_contain` checks. The output goes to `<id>.decision-result.json` with a `branches[]` array (each carrying `agent_reply`, `passed`, `notes`) rather than a single transcript — that's why the schema is distinct (`flowstore://run/decision-result/v0`). `policy-not-found-routing` shows a non-empty prefix plus `mock_bindings` (it binds `cap_verify_policy: not_found` so every branch starts inside `flow_policy_not_found`).
+`expected_class` is recorded for information; the verdict is the per-branch `must_contain` / `must_not_contain` and `capability_assertions` checks — the latter matter when a routing exit is a *silent* tool call with no narration (e.g. `cap_transfer_to_human`), where there's no script substring to anchor on. The output goes to `<id>.decision-result.json` with a `branches[]` array (each carrying `agent_reply`, `passed`, `notes`) rather than a single transcript — a runner output convention distinct from `flowstore://run/result/v0`. Like scripted cases, a decision test binds its world by `persona_id`: `policy-not-found-routing` binds a persona whose `cap_verify_policy` mock returns a not-found result, so every branch starts inside `flow_policy_not_found`.
 
 ## Evaluators
 

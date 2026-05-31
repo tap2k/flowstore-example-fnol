@@ -73,8 +73,7 @@ project/
 │   ├── <id>.flow.json                       # flow-scoped guardrails/faq/variables inline
 │   └── <id>.scripts.csv                     # per-flow utterances; language columns
 ├── capabilities/
-│   ├── <id>.capability.json                 # declaration: kind, inputs, outputs
-│   └── <id>.<variant>.mock.json             # paired testing mocks; multiple variants per capability
+│   └── <id>.capability.json                 # declaration: kind, inputs, outputs
 ├── knowledge/
 │   ├── faq.json
 │   ├── glossary.json
@@ -83,8 +82,8 @@ project/
 │       └── <id>.meta.json
 ├── comments/<uuid>.comment.json             # additive per-comment files; anchored to any entity
 ├── tests/
-│   ├── cases/<id>.test.json                 # scripted user_turns + evaluators
-│   ├── personas/<id>.persona.json           # id + system_prompt + optional name/notes
+│   ├── cases/<id>.test.json                 # scripted user_turns + evaluators; bind a persona for the world
+│   ├── personas/<id>.persona.json           # the world: vars + per-capability mocks + optional system_prompt
 │   ├── evaluators/<name>.py                 # deterministic Python evaluators
 │   ├── rubrics/<id>.rubric.json             # llm-judge evaluators (declarative)
 │   ├── gold/<id>.gold.json                  # verbatim reference transcripts; independent of cases
@@ -109,8 +108,7 @@ project/
 ├── business-goals.json                      # project-level
 ├── variables.json                           # project-level (domain variables)
 ├── capabilities/                            # shared
-│   ├── <id>.capability.json
-│   └── <id>.<variant>.mock.json
+│   └── <id>.capability.json
 ├── knowledge/                               # shared
 ├── flows/                                   # shared flows (interrupts and other cross-agent surfaces)
 │   ├── verify_identity.flow.json
@@ -176,7 +174,7 @@ Three scope levels exist in a multi-agent project. Not every entity supports all
 | **Flows** | ✓ | ✓ | — | Project-level flows are shared across agents (e.g., interrupts like `verify_identity`, `handle_wrong_person`). Agent-level flows are agent-specific. Resolution is agent-first, project-fallback. |
 | **Per-flow scripts CSV** | ✓ | ✓ | ✓ | Lives next to its flow file. Project-level flow → project-level scripts (shared verbatim across agents). Agent-level flow → agent-level scripts. |
 | **Capabilities** | ✓ | — | — | Backend APIs are project-shared. Per-agent capability declarations: post-MVP. |
-| **Capability mocks** | ✓ | — | — | Paired with capabilities via filename prefix. |
+| **Capability mocks** | ✓ | — | — | Inline on personas (`persona.mocks`, keyed by capability id) — no standalone mock files. Project-scoped because personas are. |
 | **Variables (declarations)** | ✓ | ✓ | ✓ | Domain variables project-level; agent/flow declarations rare but allowed. |
 | **Guardrails** | ✓ | ✓ | ✓ | Compliance project-level; tone/purpose agent-level; flow-specific (consent in `verify_identity`) flow-level inline. |
 | **Business goals** | ✓ | ✓ | — | Project-level metrics; agent-specific outcomes. |
@@ -197,7 +195,7 @@ Three scope levels exist in a multi-agent project. Not every entity supports all
 
 When compiling agent X's spec for the runtime, the loader merges per-scope entities:
 
-- **Capabilities, mocks, glossary, tables, models** = project-level only.
+- **Capabilities, glossary, tables, models** = project-level only (mocks ride along on project-level personas).
 - **Guardrails** = project ∪ agent ∪ flow (all applicable).
 - **Variables** = project ∪ agent ∪ flow declaration merge.
 - **Business goals** = project ∪ agent.

@@ -1,6 +1,6 @@
 # Test-driven prompt engineering
 
-Audience: anyone authoring or iterating on this fnol agent — designers, prompt authors, engineers. This doc is the methodology for *using* the test harness in `scripts/` as a development loop. For the harness mechanics (file shapes, the runner CLIs, mock dispatch, the `result.json` contract) see the sibling doc [testing-from-scripts.md](testing-from-scripts.md). For the project overview, the feature→file map, and the compile/run quickstart, see the [README](../README.md).
+Audience: anyone authoring or iterating on this fnol agent — designers, prompt authors, engineers. This doc is the methodology for *using* the test harness in `scripts/` as a development loop. For the harness mechanics (file shapes, the runner CLIs, mock dispatch, the `result.json` contract) see the sibling doc [testing-from-scripts.md](testing-from-scripts.md). For the project overview, the feature→file map, and the compile/run quickstart, see the [README](../README.md). The data model is in [`schema/SCHEMA.md`](../schema/SCHEMA.md); the on-disk file layout in [`schema/FILE-MODEL.md`](../schema/FILE-MODEL.md).
 
 The shorter version: **write the conversations you want before the prompt that produces them, then iterate the spec / generator / runtime until the harness goes green.** The full version is below.
 
@@ -111,12 +111,17 @@ A gold is the source of truth; a **test case** is the executable extraction. The
     { "kind": "substring", "pattern": "adjuster", "must_appear": true },
     { "kind": "count", "pattern": "911", "max_occurrences": 0 }
   ],
-  "mock_bindings": { "cap_verify_policy": "active", "cap_file_claim": "success" },
+  "capability_assertions": [
+    { "capability": "cap_file_claim", "invoked": true }
+  ],
   "gold_id": "happy_claim_filed",
+  "persona_id": "happy-claim",
   "model": "gemini-2.5-flash",
   "language": "en-US"
 }
 ```
+
+The case binds its world (the policy-active + claim-filed mocks) through `persona_id`; the persona's `mocks` are what fire when the agent tool-calls. See [testing-from-scripts.md § File shapes](testing-from-scripts.md#file-shapes-you-need-to-know) for the persona shape.
 
 The case is what `scripts/run_scripted.py` executes. The gold is what reviewers compare against to argue about whether the *assertions* themselves are right, and what the `claim_filed_correctly` rubric grades against. Keep both. `tests/cases/happy-claim-filed.test.json` is the full worked example — read it alongside its gold.
 
@@ -124,7 +129,7 @@ You can hand-author the case from the gold (that's how the cases here were built
 
 ### Phase 3 — compile the spec to a prompt
 
-The harness compiles for you, but to inspect what the model actually sees, compile by hand. Set `FLOWSTORE_COMPILE_CMD` to point at a flowstore checkout (see the [README](../README.md#compile)), then:
+The harness compiles for you. To inspect what the model actually sees without a checkout, use the editor's **prompt mode** — open the project at [create.flowstore.org](https://create.flowstore.org), and **Export → Copy System Prompt** (or click **Run** to chat against it live). To compile by hand on the command line, set `FLOWSTORE_COMPILE_CMD` to resolve the `flowstore-compile` CLI (a flowstore checkout's workspace script today, a bare `flowstore-compile` once the published CLI is available; see the [README](../README.md#compile--test-in-the-editor)), then:
 
 ```bash
 # System prompt + tool schemas (default language en-US):
@@ -137,11 +142,11 @@ $FLOWSTORE_COMPILE_CMD "$PWD" --format prompt --language es-US
 $FLOWSTORE_COMPILE_CMD "$PWD" --format spec
 ```
 
-`--format prompt` emits `{system_prompt, tool_schemas}`. Tool schemas come from the `capabilities/*.capability.json` declarations; the system prompt comes from `agent.json` + `flows/*.flow.json` + `knowledge/` + the guardrails. A `--vars-file <path.json>` lets you seed pre-context (e.g. a caller authenticated in the app before transfer) without editing the spec — `tests/vars/vars.known-caller.json` does exactly that for `happy-known-caller`.
+`--format prompt` emits `{system_prompt, tool_schemas}`. Tool schemas come from the `capabilities/*.capability.json` declarations; the system prompt comes from `agent.json` + `flows/*.flow.json` + `knowledge/` + the guardrails. Pre-context (e.g. a caller authenticated in the app before transfer) is seeded by a persona's `vars` block, which the harness forwards as `--vars-file`; the `known-caller` persona does exactly that for `happy-known-caller`.
 
 This compile step is the layer you'll iterate on most often once the cases exist. Three things you can change here, in order of cost:
 
-- **Variable values** (cheap) — edit `tests/vars/vars.<scenario>.json`. Useful for "what does the open look like if `caller_name` and `policy_number` are already known?"
+- **Persona world** (cheap) — edit the bound persona's `vars` / `mocks` in `tests/personas/<id>.persona.json`. Useful for "what does the open look like if `caller_name` and `policy_number` are already known?" or "what happens when `cap_file_claim` errors?"
 - **Spec content** (medium) — edit `flows/*.flow.json`, the per-flow `*.scripts.csv`, `knowledge/`, or the `guardrails/*.json`. Each change re-compiles instantly; re-run the suite to see effect.
 - **Prompt generator** (high) — change the flowstore compiler itself (in the flowstore checkout `FLOWSTORE_COMPILE_CMD` points at). Affects every spec, not just fnol. Reserve for class-of-problem fixes, not one-off tweaks.
 
@@ -160,9 +165,9 @@ python scripts/run_decision.py tests/decisions/safety-triage-routing.decision.js
 python scripts/run_persona.py tests/cases/persona-panicking.test.json
 ```
 
-`run_scripted.py` feeds `user_turns` verbatim, evaluates the case's per-turn `assertions`, `transcript_assertions`, `state_assertions`, and named `evaluators`, and writes one `flowstore://run/result/v0` file to `tests/runs/<UTCstamp>-<label>/<case_id>.result.json`. Stdout prints `evaluators: P/N passed`.
+`run_scripted.py` feeds `user_turns` verbatim, evaluates the case's per-turn `assertions`, `transcript_assertions`, `state_assertions`, `capability_assertions`, and named `evaluators`, and writes one `flowstore://run/result/v0` file to `tests/runs/<UTCstamp>-<label>/<case_id>.result.json`. Stdout prints `evaluators: P/N passed`.
 
-Flags `run_scripted.py` accepts: the positional case path, `--label` (run-dir suffix, default `manual`), `--language` (override `case.language` — required when you target the Spanish path), `--system-prompt PATH` (swap in a hand-authored prompt for A/B; tool schemas still come from the compiler), and `--vars-file PATH` (override the case's `vars_file`). It does **not** take a `--trials` flag — scripted cases run once per invocation (see [§ Trials and re-running](#trials-and-re-running)).
+Flags `run_scripted.py` accepts: the positional case path, `--label` (run-dir suffix, default `manual`), `--language` (override `case.language` — required when you target the Spanish path), `--system-prompt PATH` (swap in a hand-authored prompt for A/B; tool schemas still come from the compiler), and `--vars-file PATH` (override the persona-derived pre-context bundle). It does **not** take a `--trials` flag — scripted cases run once per invocation (see [§ Trials and re-running](#trials-and-re-running)).
 
 ### Phase 5 — read the result and decide
 
@@ -221,7 +226,7 @@ Order of investigation (cheapest first):
 
 1. **The assertion.** Is it on the right turn? (`assertions[].turn` is 1-indexed into the *agent-only* subsequence — turn 1 is the opening greeting.) Is the substring distinctive enough? Did the model paraphrase a script and your literal assertion is too tight? Should this be a rubric instead?
 
-2. **The variable bundle / mocks.** Is `tests/vars/vars.<scenario>.json` correct for the scenario? Is the right mock bound — e.g. `cap_verify_policy: "active"` for a happy path vs `"not_found"` for the policy-not-found case? A wrong `mock_bindings` makes a routing assertion impossible to satisfy. (The decision tests show this pattern: `policy-not-found-routing` binds `cap_verify_policy: not_found` in its prefix so every branch lands in `flow_policy_not_found`.)
+2. **The persona world (vars + mocks).** Is the bound persona right for the scenario? Are its `vars` correct, and does each capability mock return the result this routing decision needs — e.g. `cap_verify_policy` returning `policy_active: true` for a happy path vs a not-found result for the policy-not-found case? A wrong persona makes a routing assertion impossible to satisfy. (The decision tests show this: `policy-not-found-routing` binds a persona whose `cap_verify_policy` mock returns not-found, so every branch lands in `flow_policy_not_found`.)
 
 3. **The spec — flow content.** Did the routing condition on the relevant exit_path match what the caller said? For LLM-method exits (most of them), is the condition's `expression` clear? For calculation-method exits (the safety gate `xp_st_to_defer`, the `flow_route_verified` branches), is the variable it reads actually being set? Is the flow's `instructions` field unambiguous about what to do in this case?
 
@@ -270,7 +275,7 @@ There is no `--system-prompt-extras` flag in this harness — the only system-pr
 
 **Ignoring the diff between A and B because "both passed."** Two prompts that both pass the assertion can differ in important non-asserted ways (one reads back every digit, one doesn't; one quotes the script, one paraphrases). The transcripts in the `result.json` are worth a read even on green.
 
-**Mixing fixture changes with logic changes in one diff.** If you change `tests/vars/vars.known-caller.json` and a flow's `instructions` in the same commit, you can't tell which change moved which result. Keep them separate.
+**Mixing fixture changes with logic changes in one diff.** If you change the `known-caller` persona's `vars` and a flow's `instructions` in the same commit, you can't tell which change moved which result. Keep them separate.
 
 ---
 
@@ -282,7 +287,7 @@ Things that aren't built into this harness yet but the loop wants to mature past
 
 - **Suite-level aggregation.** Each run writes a per-case `result.json`; persona runs carry `trials[]`, but there's no suite-level manifest rolling up pass rates across cases or across time. Today you read the `tests/runs/<dir>/` files directly.
 
-- **Endpoint mode.** Run the harness against a deployed agent endpoint instead of (or alongside) the prompt-driven model, then diff. Lets you grade three things in parallel: production agent, flowstore-compiled prompt, hand-authored prompt. `mock_bindings` would be ignored in that mode (the real endpoint provides the capability).
+- **Endpoint mode.** Run the harness against a deployed agent endpoint instead of (or alongside) the prompt-driven model, then diff. Lets you grade three things in parallel: production agent, flowstore-compiled prompt, hand-authored prompt. The persona's `mocks` would be ignored in that mode (the real endpoint provides the capability).
 
 - **Routing observability without test scaffolding.** Today we infer routing from transcript content (distinctive script substrings, the presence/absence of a claim id). For points in the spec without distinctive per-flow utterances, that's brittle. Options: a synthetic mark-flow-entered capability, LLM-judge routing inference, or runtime instrumentation in a runner that exposes flow state mid-conversation.
 

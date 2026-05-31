@@ -7,8 +7,9 @@ adjuster callback.
 
 This is the **exhaustive** flowstore example: it exercises every flow type, the full
 file-model decomposition, multilingual scripts, every capability shape, and every test
-type — with a self-contained Python harness that runs them. The harness compiles and
-tests against any flowstore checkout via `FLOWSTORE_COMPILE_CMD` (see below).
+type — with a self-contained Python harness that runs them. The harness compiles via the
+`flowstore-compile` CLI, resolved through `FLOWSTORE_COMPILE_CMD` (see below) — or skip the
+setup entirely and compile + test in the editor's prompt mode.
 
 `fnol.txt` is the original plain-language design narrative the spec was authored from —
 kept for context; nothing loads it.
@@ -133,8 +134,7 @@ fnol/
 ├── business-goals.json            project business goals (llm + calculation) — file form
 ├── variables.json                 typed variable declarations — file form
 ├── capabilities/
-│   ├── <id>.capability.json       6 capability declarations (retrieval + function)
-│   └── <id>.<variant>.mock.json   8 test mocks (static + error behaviors)
+│   └── <id>.capability.json       6 capability declarations (retrieval + function)
 ├── knowledge/
 │   ├── faq.json                   LocalizedString answers (en-US / es-US) — file form
 │   ├── glossary.json
@@ -148,10 +148,10 @@ fnol/
 │   ├── cases/                     10 test cases (scripted + persona-driven)
 │   ├── decisions/                 2 decision tests (routing matrices)
 │   ├── gold/                      3 gold-standard transcripts
-│   ├── personas/                  3 LLM-as-user personas
+│   ├── personas/                  10 personas — each owns its world (vars + mocks);
+│   │                              3 also carry a system_prompt (LLM-as-user)
 │   ├── rubrics/                   5 LLM-judge rubrics
-│   ├── evaluators/                6 deterministic Python evaluators (vendored built-ins)
-│   └── vars/                      pre-populated context bundles (vars_file)
+│   └── evaluators/                6 deterministic Python evaluators (vendored built-ins)
 └── scripts/                       self-contained test harness (Gemini; swappable)
 ```
 
@@ -198,39 +198,34 @@ Every `.json` carries a `$schema` URI and is validated on load.
 | Scripted case + per-turn `assertions` | `tests/cases/happy-claim-filed`, `emergency-defer` |
 | `transcript_assertions` (substring/regex/count/terminate) | most cases |
 | `state_assertions` (final variable scope) | `happy-claim-filed` (runtime-only — see notes) |
+| `capability_assertions` (`invoked` true/false) | `happy-claim-filed`; decision branches in `policy-not-found-routing` |
 | Gold standard + `gold_id` | `tests/gold/*` ← `happy-claim-filed`, `emergency-defer`, `policy-not-found-retry` |
-| `vars_file` (pre-populated context) | `happy-known-caller` ← `tests/vars/vars.known-caller.json` |
-| Persona-driven case (LLM-as-user) | `tests/cases/persona-*` ← `tests/personas/*` |
+| Persona owns the world (`vars` + `mocks`) | every case ← `tests/personas/*` |
+| Persona `vars` (pre-populated context) | `happy-known-caller` ← `tests/personas/known-caller.persona.json` |
+| Persona-driven case (LLM-as-user `system_prompt`) | `tests/cases/persona-*` ← `tests/personas/{panicking-caller,impatient-wants-human,redteam-fault-fishing}` |
 | Decision test (routing matrix) | `tests/decisions/*` |
 | LLM-judge rubric | `tests/rubrics/*` |
 | Deterministic Python evaluator | `tests/evaluators/*` |
-| Capability mock — `static` + `error` | `capabilities/*.mock.json` (e.g. `cap_file_claim.system_error`) |
+| Capability mock — `static` + `error` | persona `mocks` (e.g. `filing-system-error` errors `cap_file_claim`) |
 | Multilingual case | `tests/cases/es-happy-claim` (`language: es-US`) |
 
 ---
 
-## Compile
+## Compile & test in the editor
 
-Compilation is done by the flowstore compiler. The harness invokes it for you; to run it
-by hand, point `FLOWSTORE_COMPILE_CMD` at a flowstore checkout's workspace script (when
-flowstore ships a published CLI this collapses to `flowstore-compile`):
+The no-install way to compile this spec to a prompt and try it: open the project in the hosted
+editor at [create.flowstore.org](https://create.flowstore.org) (GitHub-open or **Import** a
+folder — see [Open it in the editor](#open-it-in-the-editor) above). The editor compiles the
+system prompt from the spec for you.
 
-```bash
-# Override resolves the compiler regardless of where this repo lives:
-export FLOWSTORE_COMPILE_CMD="npm --prefix /path/to/flowstore -w @flowstore/core run --silent flowstore-compile --"
+- **Test it interactively** — click **Run** to open the Simulate panel. By default it runs in
+  **prompt mode**: your chat goes against the system prompt compiled from the spec, exactly what
+  you'd ship. Pick the language in the panel to exercise the es-US column. Try: *"I was just in a
+  car accident."*
+- **Get the compiled prompt out** — **Export → Copy System Prompt** (or **Export ZIP**).
 
-# Resolved spec (single JSON doc, runtime-canonical shape):
-$FLOWSTORE_COMPILE_CMD "$PWD" --format spec
-
-# System prompt + tool schemas (default en-US, then Spanish):
-$FLOWSTORE_COMPILE_CMD "$PWD" --format prompt
-$FLOWSTORE_COMPILE_CMD "$PWD" --format prompt --language es-US
-```
-
-Pass the project directory as an **absolute** path (`$PWD` above): the `npm --prefix` form
-runs from the flowstore checkout, so a relative `.` would resolve there, not here. The test
-scripts handle this for you. `FLOWSTORE_COMPILE_CMD` is required — the scripts exit with a
-clear hint if it's unset.
+That's the whole compile-and-test loop, no checkout required. (The Python harness under
+`scripts/` automates the same compile for batch/CI runs — see [Run the tests](#run-the-tests).)
 
 `prompts/GOLD-EXTRACTION-PROMPT.txt` is the authoring prompt for turning real source
 material (call transcripts, scripts, docs) into the `tests/gold/*.gold.json` records here.
@@ -239,16 +234,19 @@ material (call transcripts, scripts, docs) into the `tests/gold/*.gold.json` rec
 
 ## Run the tests
 
-The harness drives the **compiled prompt** with Gemini. Some spec features are runtime-only
-(variable scope, exit-path `actions`, `retrieve_on_turn`) — those don't execute under this
-prompt-target setup; see Notes below for what that means in practice.
+For batch/CI testing beyond interactive simulation, the Python harness drives the **compiled
+prompt** with Gemini. This path compiles via a local flowstore checkout — set
+`FLOWSTORE_COMPILE_CMD` to point at one (or use the published CLI once it ships); the editor's
+prompt mode above is the no-checkout alternative. Some spec features are runtime-only (variable
+scope, exit-path `actions`, `retrieve_on_turn`) and don't execute under this prompt-target
+setup; see Notes below.
 
 ```bash
 python3 -m venv .venv && ./.venv/bin/pip install -r scripts/requirements.txt
 export GOOGLE_API_KEY=...        # or GEMINI_API_KEY
 export FLOWSTORE_COMPILE_CMD="npm --prefix /path/to/flowstore -w @flowstore/core run --silent flowstore-compile --"
 
-# Scripted case (user_turns + assertions + mocks + rubrics + gold compare)
+# Scripted case (user_turns + assertions + persona world + rubrics + gold compare)
 ./.venv/bin/python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json
 
 # Decision test (pin a point, fan out branch inputs)
@@ -279,9 +277,10 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
 - **`state_assertions`** need variable scope. The prompt-target harness doesn't track a
   variable bag (the LLM does it implicitly), so `final_variables` stays empty. The
   assertion *shape* is demonstrated.
-- **`vars_file` matters most for pre-context agents.** fnol captures almost everything live,
-  so `happy-known-caller` only shows the injection mechanism (a caller pre-authenticated in
-  the app). Outbound agents lean on it far more.
+- **Persona `vars` matter most for pre-context agents.** fnol captures almost everything live,
+  so `happy-known-caller` (binding the `known-caller` persona) only shows the injection
+  mechanism — a caller pre-authenticated in the app, seeded via the persona's `vars`.
+  Outbound agents lean on it far more.
 - **Evaluators are vendored built-ins you customize.** The six `tests/evaluators/*.py` are
   generic + spec-aware with sensible fnol defaults; a real project edits them. A test case's
   `evaluators[]` name resolves to a rubric (`tests/rubrics/<name>.rubric.json`) if one exists,
@@ -295,7 +294,7 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
 - [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — authoring agent prompts test-first.
 - [`prompts/GOLD-EXTRACTION-PROMPT.txt`](prompts/GOLD-EXTRACTION-PROMPT.txt) — the LLM prompt that turns source material (transcripts, scripts, docs) into `tests/gold/*.gold.json` records.
 
-**New to flowstore?** It's a behavioral spec format for conversational agents — a graph of *flows* connected by *exit paths*, decomposed into per-concern files in a Git repo (what you see here). The authoritative spec data model is [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md) and the on-disk layout is [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md), both in the [flowstore](https://github.com/tap2k/flowstore) repo; this project is a worked instance of both.
+**New to flowstore?** It's a behavioral spec format for conversational agents — a graph of *flows* connected by *exit paths*, decomposed into per-concern files in a Git repo (what you see here). The authoritative spec data model is [`schema/SCHEMA.md`](schema/SCHEMA.md) and the on-disk layout is [`schema/FILE-MODEL.md`](schema/FILE-MODEL.md), vendored into this repo; this project is a worked instance of both.
 
 ---
 
