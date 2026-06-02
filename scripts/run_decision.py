@@ -60,6 +60,8 @@ def main(argv=None):
     parser.add_argument("--system-prompt", default=None,
                         help="file overriding the compiled system prompt")
     parser.add_argument("--vars-file", default=None)
+    parser.add_argument("--thinking", action="store_true",
+                        help="Enable Gemini Flash thinking (default: off).")
     args = parser.parse_args(argv)
 
     from _agent import (default_model, load_persona, make_client,
@@ -97,7 +99,7 @@ def main(argv=None):
         # Fresh conversation per branch so they don't bleed into each other.
         dispatcher = make_dispatcher_from_persona(persona, name_map)
         convo = Conversation(client, model, system_prompt, tool_schemas,
-                            dispatcher, name_map)
+                            dispatcher, name_map, thinking=args.thinking)
         convo.agent_reply(None)            # implicit opening agent turn
         for user_text in prefix_turns:
             convo.agent_reply(user_text)

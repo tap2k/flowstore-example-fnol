@@ -65,12 +65,12 @@ def _persona_reply(client, model, persona_prompt, transcript):
 
 
 def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
-              dispatcher, name_map, persona_prompt, max_turns):
+              dispatcher, name_map, persona_prompt, max_turns, thinking=False):
     """Run one full persona conversation; return the Conversation."""
     from _agent import Conversation
 
     convo = Conversation(client, agent_model, system_prompt, tool_schemas,
-                        dispatcher, name_map)
+                        dispatcher, name_map, thinking=thinking)
     # Agent opens.
     convo.agent_reply(None)
     agent_turns = 1
@@ -86,6 +86,8 @@ def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Run an fnol persona test.")
+    parser.add_argument("--thinking", action="store_true",
+                        help="Enable Gemini Flash thinking for the agent (default: off).")
     parser.add_argument("case", help="path to tests/cases/<id>.test.json (with persona_id)")
     parser.add_argument("--label", default="manual")
     parser.add_argument("--trials", type=int, default=1)
@@ -170,7 +172,7 @@ def main(argv=None):
         dispatcher = make_dispatcher_from_persona(persona, name_map)
         convo = run_trial(client, agent_model, persona_model, system_prompt,
                          tool_schemas, dispatcher, name_map, persona_prompt,
-                         max_turns)
+                         max_turns, thinking=args.thinking)
         evals = evaluate_convo(convo)
         last_convo, last_evals = convo, evals
         trials_out.append({

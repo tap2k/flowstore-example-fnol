@@ -195,6 +195,8 @@ def main(argv=None):
                         help="path to a file overriding the compiled system prompt")
     parser.add_argument("--vars-file", default=None,
                         help="path to a variables override file")
+    parser.add_argument("--thinking", action="store_true",
+                        help="Enable Gemini Flash thinking (default: off).")
     args = parser.parse_args(argv)
 
     # --- SDK + harness internals imported only after arg parsing -----------
@@ -231,7 +233,7 @@ def main(argv=None):
 
     client = make_client()
     convo = Conversation(client, model, system_prompt, tool_schemas,
-                        dispatcher, name_map)
+                        dispatcher, name_map, thinking=args.thinking)
 
     # Agent opens (chatbot_initiates), then alternate with each user turn.
     convo.agent_reply(None)

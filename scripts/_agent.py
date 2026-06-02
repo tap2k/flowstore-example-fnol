@@ -233,7 +233,7 @@ class Conversation:
     """
 
     def __init__(self, client, model, system_prompt, tool_schemas, dispatcher,
-                 name_map):
+                 name_map, thinking=False):
         self._client = client
         self._model = model
         self._system_prompt = system_prompt
@@ -250,6 +250,12 @@ class Conversation:
             system_instruction=system_prompt,
             temperature=0.0,
             tools=tools,
+            # Flash thinking off by default (matches the runner; Pro rejects budget=0).
+            thinking_config=(
+                types.ThinkingConfig(thinking_budget=0)
+                if not thinking and "flash" in (model or "").lower()
+                else None
+            ),
         )
         # Provider-native running history.
         self.contents: list = []
