@@ -1,9 +1,0 @@
-{
-  "$schema": "flowstore://meta/comment/v0",
-  "id": "c-2026-05-20-a1",
-  "anchor": { "kind": "flow", "id": "flow_safety_triage" },
-  "author": "dana-legal",
-  "timestamp": "2026-05-20T14:02:00Z",
-  "body": "Can we make absolutely sure intake never starts before safety is confirmed? Compliance flagged a recording where the bot asked for a policy number while the caller was still on the shoulder.",
-  "resolved": true
-}

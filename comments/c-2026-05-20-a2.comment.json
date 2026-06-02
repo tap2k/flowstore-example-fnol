@@ -1,9 +1,0 @@
-{
-  "$schema": "flowstore://meta/comment/v0",
-  "id": "c-2026-05-20-a2",
-  "anchor": { "kind": "flow", "id": "flow_safety_triage" },
-  "author": "quinn-design",
-  "timestamp": "2026-05-20T16:40:00Z",
-  "body": "Added a flow-scoped guardrail (gr_st_safety_gate) that hard-gates any incident/policy questions until safety is confirmed, on top of the project-level gr_safety_first. Two layers now.",
-  "resolved": true
-}
