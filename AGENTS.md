@@ -2,8 +2,6 @@
 
 Context for anyone (human or AI) working in this repo. It explains what the project is, how a flowstore spec is structured, how to author and change it, and how to compile and test it. The spec data model is in [`schema/SCHEMA.md`](schema/SCHEMA.md); the on-disk layout in [`schema/FILE-MODEL.md`](schema/FILE-MODEL.md).
 
-> **No cross-session agent memory for this project.** State that needs to persist belongs in repo files (this file, the spec, the docs) where it's reviewable in git — not in an agent's private memory store.
-
 ---
 
 ## What this repo is
