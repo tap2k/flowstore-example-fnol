@@ -290,6 +290,7 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
 
 ## Further reading
 
+- [`AGENTS.md`](AGENTS.md) — the working guide for this repo: orientation, the flowstore model, how to author the spec, a testing overview, and conventions. Start here if you're (human or agent) about to change the spec.
 - [`docs/testing-from-scripts.md`](docs/testing-from-scripts.md) — the bring-your-own-script testing path in depth (file shapes, the run loop, mock dispatch).
 - [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — authoring agent prompts test-first.
 - [`prompts/GOLD-EXTRACTION-PROMPT.txt`](prompts/GOLD-EXTRACTION-PROMPT.txt) — the LLM prompt that turns source material (transcripts, scripts, docs) into `tests/gold/*.gold.json` records.
