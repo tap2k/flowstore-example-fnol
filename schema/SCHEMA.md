@@ -185,7 +185,9 @@ In multi-agent projects, the compiler merges across scope levels (project ∪ ag
       "description": "string",
       "kind": "retrieval | function",
       "inputs": ["variable_name"],
-      "outputs": ["variable_name"]
+      "outputs": ["variable_name"],
+      "non_blocking": "boolean (optional)",
+      "pending_message": "string | { <lang>: string } (optional)"
     }
   ],
 
@@ -240,7 +242,7 @@ In multi-agent projects, the compiler merges across scope levels (project ∪ ag
 - **`system_prompt`** — optional author-owned template wrapping the compiled prompt. `LocalizedString` (plain string for monolingual specs, `{ <lang>: string }` for multilingual). The reserved placeholder `{generated}` expands to all spec-derived sections (role, runtime context, guardrails, flows, interrupts, knowledge); text on either side becomes preamble/postamble. `{variable}` substitution applies as elsewhere. Omitting `{generated}` is a deliberate full override — codegen surfaces a warning but emits the template as-is. An author-defined variable named `generated` would collide with the placeholder and is reserved by convention. Prefer guardrails or per-flow instructions when the rule fits there; reach for `system_prompt` only when the framing doesn't.
 - **`guardrails`** — cross-cutting behavioral invariants. Each is a stable `id` and a single `statement`. Conditional rules written inline as natural language; executable conditional routing belongs in interrupt flows, not guardrails.
 - **`business_goals`** — end-to-end outcome criteria for evaluation. Each entry has a stable `id`, a `name`, and a checkable criterion using the standard three methods. Distinct from `guardrails` (turn-by-turn invariants).
-- **`capabilities`** — declared catalog of external integrations. Each entry has an `id` (editor-generated), a `name` (snake_case, runtime dispatch identifier), a `description` (when/why), a `kind` (`retrieval` or `function`), optional `inputs`, and optional `outputs`. Endpoints, headers, and credentials live in the execution layer, not the spec.
+- **`capabilities`** — declared catalog of external integrations. Each entry has an `id` (editor-generated), a `name` (snake_case, runtime dispatch identifier), a `description` (when/why), a `kind` (`retrieval` or `function`), optional `inputs`, and optional `outputs`. Endpoints, headers, and credentials live in the execution layer, not the spec. Optional **`non_blocking`** marks a `function`-kind capability non-blocking: when dispatched on an exit-path action the runner fires it without stalling the transition, the conversation continues, and the declared `outputs` bind to scope when they land — so only set it when the result isn't needed immediately (a downstream `entry_condition` / next turn that reads them may see them undefined until they land). Non-blocking is portable conversation behavior, not execution: it changes observable pacing and travels with the spec, like `chatbot_initiates`, naming the behavior rather than the runtime's concurrency mechanism. `retrieve_on_turn` is always pre-LLM/synchronous and ignores `non_blocking`. Optional **`pending_message`** (a `LocalizedString`) is the holding line spoken when a non-blocking dispatch starts, so there's no dead air while it runs.
 - **`knowledge`** — FAQ, glossary, tables. FAQ `answer` is a `LocalizedString` (plain string for monolingual specs, or a `{ <lang>: string }` map for multilingual).
 - **`variables`** — optional declarations enriching variables with `type`, `description`, and (for `enum`) `values`. Declaration does not create a variable.
 - **`entry_flow_id`** — the flow the conversation enters first.
@@ -321,7 +323,9 @@ In multi-agent projects, the compiler merges across scope levels (project ∪ ag
     }
   },
 
-  "retrieve_on_turn": ["<capability_id>"]
+  "retrieve_on_turn": ["<capability_id>"],
+
+  "tools": ["<capability_id>"]
 }
 ```
 
@@ -338,7 +342,7 @@ In multi-agent projects, the compiler merges across scope levels (project ∪ ag
 - **`exit_paths[].condition`** — optional. When present, articulates *when* the LLM should take this exit. When absent, the exit is unconditional — the runtime falls through to it when no other condition matches.
 - **`exit_paths[].max_turns`** — optional positive integer. Turn-budget escape: this exit fires deterministically once the active flow frame has spent that many agent turns (turn counter is per-frame and resets on entry). Mutually exclusive with `condition` on the same exit — pair them by adding a separate budget-fallback exit alongside conditional ones. Matches the per-widget retry pattern in Voiceflow / Botpress / Twilio Studio. The firing exit emits an `exit_path_taken` event with `method: "max_turns"`.
 - **`exit_paths[].notes`** — authoring annotation for the routing decision. Runtimes ignore. See [Notes (Authoring Annotations)](#notes-authoring-annotations).
-- **`exit_paths[].actions`** — non-conversational side effects fired when this exit is taken. Each entry references an `agent.capabilities[]` entry by `capability_id`. Inputs are resolved implicitly from variable scope; outputs declared on the capability are written back into variable scope on dispatch (failure → outputs simply don't land — downstream conditions cover the missing case). Distinct from a future mid-conversation `tool` step (see Open Questions), which would dispatch capabilities mid-conversation rather than on a flow boundary.
+- **`exit_paths[].actions`** — non-conversational side effects fired when this exit is taken. Each entry references an `agent.capabilities[]` entry by `capability_id`. Inputs are resolved implicitly from variable scope; outputs declared on the capability are written back into variable scope on dispatch (failure → outputs simply don't land — downstream conditions cover the missing case). Distinct from a future mid-conversation `tool` step (see Open Questions), which would dispatch capabilities mid-conversation rather than on a flow boundary. A referenced capability's `async` flag (below) governs whether dispatch blocks the transition.
 - **`scripts`** — flat array of utterances for this flow. Each entry has a stable `id`, a `text` that is either a plain string (monolingual) or a `LocalizedString` keyed by language code, and optional `variations` (alternative paraphrases for surface-form variety) as a per-language record of arrays keyed by codes from `agent.meta.languages`.
 - **`guardrails`** — flow-scoped behavioral invariants. Same shape as agent-level.
 - **`notes`** — authoring annotation. Runtimes ignore.
@@ -346,6 +350,7 @@ In multi-agent projects, the compiler merges across scope levels (project ∪ ag
 - **`knowledge.faq`** — flow-scoped FAQ entries. Same shape as agent-level.
 - **`variables`** — optional flow-scoped variable declarations. Same shape as agent-level.
 - **`retrieve_on_turn`** — array of `agent.capabilities[].id` values, each referencing a capability with `kind: "retrieval"`. Fires sequentially **pre-LLM each turn this flow is active**, with capability inputs resolved from variable scope (same rule as exit-path actions). Outputs bind to the variable bag (so retrieved values can be referenced via `{var}` substitution if useful); additionally, the first declared output's text is auto-injected into the system prompt as a `Retrieved context:` block above the flow sections. Validator rejects ids that don't exist or that reference `kind: "function"`. Empty/unset = no auto-fire on this flow. This is what makes the `kind: "retrieval"` distinction runtime-meaningful — without `retrieve_on_turn`, retrieval dispatches identically to function.
+- **`tools`** — array of `agent.capabilities[].id` values: the allow-list of capabilities exposed as **model-callable tools while this flow is active**. Unset/empty = every agent capability is available (the current, unscoped behavior); present = only the listed ids are callable in this flow. Any `kind` may be listed — a `kind: "retrieval"` capability can be both model-callable here *and* auto-fired via `retrieve_on_turn`. This is the per-stage tool scoping a handoff runtime (e.g. the OpenAI Agents realtime exporter) reads on each transition to populate the active agent's `tools`; it has **no effect on the compiled monolithic prompt**, since capabilities are never rendered into prompt text. Validator rejects ids that don't resolve to an `agent.capabilities[]` entry. Distinct from `retrieve_on_turn` (pre-LLM auto-fire) and `exit_paths[].actions` (fire-on-exit) — `tools` governs only *availability*, not invocation.
 
 ---
 
@@ -399,6 +404,7 @@ Example: `total_due_amount.visible_when: "identity_confirmed"` — the model nev
 
 - **Linear conversational flow** — `instructions` + `scripts`. Exit paths with `goto: <next_flow_id>`. The default.
 - **Free-form node** — `instructions` only, no scripts. The LLM handles conversation freely within guardrails.
+- **Playbook / slot-filler** — a free-form node that gathers a set of values before moving on: `instructions` naming what to collect + an **llm-method exit condition** that fires once they're collected (e.g. `condition.expression: "the customer has given name, date of birth, and policy number"`). The model both gathers and judges completeness — no separate "required variables" field is needed; the gate *is* the exit condition. Use the `calculation` method instead when the values are in scope deterministically (capability outputs / direct assigns) and you want a hard gate rather than model judgment.
 - **Interrupt** — `type: "interrupt"` + `entry_condition`. Exit paths typically include `goto: "RETURN"` so the user returns to the interrupted flow.
 - **Helper / utility subroutine** — `type: "utility"`. A flow with `goto: "RETURN"` exits, called by explicit edges from other flows. Callers push a frame on entry; the subroutine returns.
 - **Deterministic call tree** — calculation conditions on exits, direct assigns. No LLM judgment in routing.
