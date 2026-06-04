@@ -1,0 +1,17 @@
+{
+  "$schema": "flowstore://test/case/v0",
+  "id": "barge-in-impatient",
+  "name": "Caller talks over the agent (barge-in) mid-intake",
+  "notes": "T1 voice-sim fixture — run with --voice. The 3rd turn sets \"barge_in\": true: under --voice the harness truncates the agent's prior reply to the prefix the caller 'heard' before cutting in (_voice.barge_in_prefix), rewrites the model history and transcript to that prefix, then delivers the interruption, so the agent's next turn reacts to being cut off. Without --voice the turn is delivered as ordinary text (no truncation). No scored assertions — barge-in handling is judged by T3, not here.",
+  "user_turns": [
+    "I'm fine, just shaken up.",
+    "Casey Lin, policy three oh nine eight eight one two.",
+    { "text": "yeah yeah I know just tell me what happens next", "barge_in": true },
+    "Okay. A tree fell on the hood while it was parked."
+  ],
+  "evaluators": [],
+  "model": "gemini-2.5-flash",
+  "language": "en-US",
+  "tags": ["voice", "barge-in", "t1"],
+  "persona_id": "known-caller"
+}

@@ -243,8 +243,7 @@ setup; see Notes below.
 
 ```bash
 python3 -m venv .venv && ./.venv/bin/pip install -r scripts/requirements.txt
-export GOOGLE_API_KEY=...        # or GEMINI_API_KEY
-export FLOWSTORE_COMPILE_CMD="npm --prefix /path/to/flowstore -w @flowstore/core run --silent flowstore-compile --"
+cp .env.example .env   # then fill in GOOGLE_API_KEY (or GEMINI_API_KEY) + FLOWSTORE_COMPILE_CMD; the scripts auto-load it (python-dotenv)
 
 # Scripted case (user_turns + assertions + persona world + rubrics + gold compare)
 ./.venv/bin/python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json

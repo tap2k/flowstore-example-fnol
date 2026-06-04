@@ -277,7 +277,23 @@ class Conversation:
 
     # -- main loop -------------------------------------------------------
 
-    def agent_reply(self, user_text):
+    def truncate_last_reply(self, spoken_prefix):
+        """Barge-in (T1): overwrite the last agent turn — in both the model
+        history and the recorded transcript — with the prefix the caller heard
+        before cutting in, so the agent's next turn reacts to being interrupted.
+        Prompt-target only (a live session can't un-speak)."""
+        types = self._types
+        if self.contents and getattr(self.contents[-1], "role", None) == "model":
+            self.contents[-1] = types.Content(
+                role="model", parts=[types.Part.from_text(text=spoken_prefix)]
+            )
+        for t in reversed(self.transcript):
+            if t["role"] == "agent":
+                t["content"] = spoken_prefix
+                t["barge_in_truncated"] = True
+                break
+
+    def agent_reply(self, user_text, barge_in=False):
         """Advance the dialogue by one agent turn and return its text.
 
         Pass user_text=None for the opening turn (chatbot_initiates) — we then
@@ -299,7 +315,10 @@ class Conversation:
                     )])
                 )
         else:
-            self.transcript.append({"role": "user", "content": user_text})
+            user_entry = {"role": "user", "content": user_text}
+            if barge_in:
+                user_entry["barge_in"] = True
+            self.transcript.append(user_entry)
             self.contents.append(
                 types.Content(role="user",
                               parts=[types.Part.from_text(text=user_text)])

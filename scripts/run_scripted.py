@@ -29,6 +29,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Auto-load .env from project root (script lives in <project>/scripts/).
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
 # Make sibling modules importable regardless of CWD.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -197,7 +202,16 @@ def main(argv=None):
                         help="path to a variables override file")
     parser.add_argument("--thinking", action="store_true",
                         help="Enable Gemini Flash thinking (default: off).")
+    parser.add_argument("--voice", action="store_true",
+                        help="Voice-realistic simulation (T1): ASR-shape user turns "
+                             "(lowercase/de-punctuate, optional disfluencies) and honor "
+                             "barge_in turns. Forces thinking off. See planning/voice-testing.md.")
+    parser.add_argument("--voice-level", choices=["clean", "light", "heavy"], default="clean",
+                        help="ASR-shaping intensity under --voice: 'clean' (default), "
+                             "'light' (+ filler), 'heavy' (+ a false start).")
     args = parser.parse_args(argv)
+    if args.voice and args.thinking:
+        parser.error("--voice forces thinking off (voice-realistic); drop --thinking.")
 
     # --- SDK + harness internals imported only after arg parsing -----------
     from _agent import (default_model, load_persona, make_client,
@@ -206,6 +220,7 @@ def main(argv=None):
     from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
+    import _voice
 
     case_path = Path(args.case).resolve()
     case = load_json(case_path)
@@ -237,8 +252,21 @@ def main(argv=None):
 
     # Agent opens (chatbot_initiates), then alternate with each user turn.
     convo.agent_reply(None)
-    for user_text in case.get("user_turns", []) or []:
-        convo.agent_reply(user_text)
+    prev_reply = convo.transcript[-1]["content"] if convo.transcript else ""
+    for idx, (user_text, is_barge) in enumerate(
+        _voice.expand_user_turns(case.get("user_turns", []) or [])
+    ):
+        if args.voice:
+            user_text = _voice.asr_shape(
+                user_text, language, seed=idx, level=args.voice_level
+            )
+        # Barge-in: the caller talks over the agent, so it only "heard" a prefix
+        # of the prior reply. fnol drives the compiled prompt directly (no live
+        # session), so we can rewrite history + transcript to that prefix.
+        if is_barge and args.voice and prev_reply:
+            convo.truncate_last_reply(_voice.barge_in_prefix(prev_reply, seed=idx))
+        convo.agent_reply(user_text, barge_in=is_barge)
+        prev_reply = convo.transcript[-1]["content"] if convo.transcript else ""
 
     prompt_source = args.system_prompt if args.system_prompt else "flowstore-compile"
     result = {
@@ -248,6 +276,8 @@ def main(argv=None):
         "agent_id": agent_dict.get("id"),
         "model": model,
         "prompt_source": prompt_source,
+        "voice": bool(args.voice),
+        "voice_level": args.voice_level if args.voice else None,
         "transcript": convo.transcript,
         "capability_calls": convo.capability_calls,
         "final_variables": {},  # empty on the compiled-prompt target (no scope)

@@ -25,6 +25,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Auto-load .env from project root (script lives in <project>/scripts/).
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 RESULT_SCHEMA = "flowstore://run/result/v0"

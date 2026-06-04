@@ -88,12 +88,13 @@ The model this repo uses:
 - **Assertions.** `assertions` (per-turn substrings), `transcript_assertions` (whole-transcript predicates), `state_assertions` (final variable scope — runner target only), and `capability_assertions` (`{capability, invoked}`, deterministic over the recorded tool calls — the load-bearing way to pin "filed the claim" / "did NOT file mid-emergency").
 - **Targets.** The default compiled-prompt target is self-contained; a native flowstore **runner** target additionally tracks variable scope, fires exit actions, and executes `retrieve_on_turn` (so `state_assertions` and the retrieval capability evaluate there).
 - **The loop.** Capture/author a **gold** (`prompts/GOLD-EXTRACTION-PROMPT.txt`) → derive a **case** → compile → run → read the transcript and diagnose. The two docs above go deep on each step.
+- **Voice-realistic simulation (T1).** `run_scripted.py --voice` runs a case under voice conditions, no audio: forces thinking **off** (errors if combined with `--thinking`), **ASR-shapes** every user turn (lowercase / de-punctuate), and honors `barge_in` turns. `--voice-level {clean,light,heavy}` (default `clean`) dials shaping intensity (`light` adds a disfluency, `heavy` a false start). Pure + seeded (reproducible). A `user_turns` entry may be a plain string or, for barge-in, `{"text": "...", "barge_in": true}` — the caller talks over the agent, so its prior reply is truncated to the prefix the caller "heard" (`Conversation.truncate_last_reply`, rewriting history + transcript) before the interruption lands. The transforms live in `scripts/_voice.py`, shared byte-identical with `awaaz-dpd31`; works on any existing case (no voice variants). The result records `voice` / `voice_level`.
 
 ```bash
 python3 -m venv .venv && ./.venv/bin/pip install -r scripts/requirements.txt
-export GOOGLE_API_KEY=...
-export FLOWSTORE_COMPILE_CMD="npm --prefix /path/to/flowstore -w @flowstore/core run --silent flowstore-compile --"
+cp .env.example .env   # then fill in GOOGLE_API_KEY + FLOWSTORE_COMPILE_CMD; the scripts auto-load it (python-dotenv)
 ./.venv/bin/python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json
+./.venv/bin/python scripts/run_scripted.py tests/cases/barge-in-impatient.test.json --voice   # voice-sim + barge-in
 ./.venv/bin/python scripts/run_decision.py tests/decisions/safety-triage-routing.decision.json
 ./.venv/bin/python scripts/run_persona.py tests/cases/persona-panicking.test.json
 ```
