@@ -5,8 +5,10 @@
     "kind": "flow",
     "id": "flow_safety_triage"
   },
+  "thread_id": "t-21f7644c-4363",
+  "parent_id": null,
   "author": "tap2k",
   "timestamp": "2026-06-01T19:12:05.727Z",
   "body": "neil look at this",
-  "resolved": false
+  "resolved_by": null
 }

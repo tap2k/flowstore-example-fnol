@@ -178,6 +178,8 @@ Every `.json` carries a `$schema` URI and is validated on load.
 | Collection **file form** | `business-goals.json`, `variables.json`, `knowledge/faq.json` |
 | `retrieval` capability + `retrieve_on_turn` | `cap_lookup_coverage` wired into `int_policy_question` |
 | Capability **outputs bind to scope** | `cap_verify_policy` (→ `policy_active`), `cap_file_claim` (→ `claim_id`) |
+| `non_blocking` capability + `pending_message` | `cap_schedule_adjuster` (fire-and-forget callback booking, no outputs) |
+| `system_prompt` template (`{generated}` + preamble/postamble, LocalizedString) | `agent.json` |
 | Calc-route-after-action junction | `flow_route_verified` branches on the bound `policy_active` |
 | `calculation` vs `llm` conditions | `flow_safety_triage` exits (calc safety gate + llm proceed) |
 | `max_turns` turn-budget exit | `flow_policy_not_found` → `xp_pnf_budget` |

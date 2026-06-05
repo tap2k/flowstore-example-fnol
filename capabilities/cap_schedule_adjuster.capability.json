@@ -2,8 +2,13 @@
   "$schema": "flowstore://spec/capability/v0",
   "id": "cap_schedule_adjuster",
   "name": "schedule_adjuster",
-  "description": "Book the adjuster callback for the filed claim. Side-effect only.",
+  "description": "Book the adjuster callback for the filed claim. Side-effect only — fired on the closing exit, so the conversation needn't wait on it. No outputs, so non_blocking is safe.",
   "kind": "function",
   "inputs": ["claim_id", "callback_number", "callback_window"],
-  "outputs": []
+  "outputs": [],
+  "non_blocking": true,
+  "pending_message": {
+    "en-US": "Locking in that callback now — one sec.",
+    "es-US": "Estoy agendando esa llamada de seguimiento — un momento."
+  }
 }
