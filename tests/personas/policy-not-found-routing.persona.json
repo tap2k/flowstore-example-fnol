@@ -1,8 +1,8 @@
 {
   "$schema": "flowstore://test/persona/v0",
   "id": "policy-not-found-routing",
-  "system_prompt": "",
   "name": "Policy-not-found: route on how the caller responds",
+  "notes": "World-only persona for the policy-not-found decision test. Same inactive-policy mock as policy-not-found-retry, plus cap_log_no_file, so each branch off the shared prefix (retry / human / give-up) can be exercised. Bound by the policy-not-found-routing decision test.",
   "mocks": {
     "cap_verify_policy": {
       "kind": "static",

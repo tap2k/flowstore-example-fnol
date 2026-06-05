@@ -1,7 +1,6 @@
 {
   "$schema": "flowstore://test/persona/v0",
   "id": "known-caller",
-  "system_prompt": "",
   "name": "Pre-identified caller — name + policy seeded before the call",
   "notes": "World-only persona for the pre-context scenario: the caller was authenticated in the Northwind app before transfer, so caller_name / policy_number are seeded into the compiled prompt via this persona's vars (the runner forwards them to the compiler as --vars-file). Same happy-path mocks as the happy-claim persona. Bound by happy-known-caller; demonstrates how persona vars carry pre-populated context.",
   "vars": {

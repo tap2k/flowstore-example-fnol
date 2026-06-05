@@ -1,8 +1,8 @@
 {
   "$schema": "flowstore://test/persona/v0",
   "id": "filing-system-error",
-  "system_prompt": "",
   "name": "Claims backend errors on file — agent recovers without fabricating",
+  "notes": "World-only persona. Policy verifies active, but cap_file_claim returns an error (claims_backend_unavailable: 503), so claim_id never binds and the agent must recover without fabricating one — apologize and hand off to a human. Bound by filing-system-error; demonstrates the error mock kind.",
   "mocks": {
     "cap_verify_policy": {
       "kind": "static",
