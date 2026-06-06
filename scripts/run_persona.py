@@ -103,8 +103,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     from _agent import (default_model, load_persona, make_client,
-                        make_dispatcher_from_persona, name_to_id,
-                        resolve_paths, persona_vars_to_tempfile)
+                        make_dispatcher, name_to_id, resolve_fixture,
+                        resolve_paths, vars_to_tempfile)
     from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
@@ -113,20 +113,29 @@ def main(argv=None):
     case = load_json(case_path)
     project_dir = resolve_paths(case_path)
 
+    # Simulated-user actor: a referenced persona (persona_id) or an inline
+    # one-off prompt (system_prompt). Scripted cases go through run_scripted.py.
     persona_id = case.get("persona_id")
-    if not persona_id:
-        parser.error("case has no persona_id; use run_scripted.py for scripted cases")
-    persona = load_persona(project_dir, persona_id)
-    if not persona:
-        parser.error(f"persona {persona_id} not found in tests/personas/")
-    persona_prompt = persona.get("system_prompt", "")
+    persona = None
+    if persona_id:
+        persona = load_persona(project_dir, persona_id)
+        if not persona:
+            parser.error(f"persona {persona_id} not found in tests/personas/")
+        persona_prompt = persona.get("system_prompt", "")
+    elif case.get("system_prompt"):
+        persona_prompt = case["system_prompt"]
+    else:
+        parser.error("case has no persona_id or inline system_prompt; "
+                     "use run_scripted.py for scripted cases")
 
+    # Effective fixture = persona ∪ case (case wins per key).
+    fixture = resolve_fixture(persona, case)
     language = args.language or case.get("language")
     vars_file = args.vars_file
     if vars_file:
         vars_file = str(Path(vars_file).resolve())
     else:
-        vars_file = persona_vars_to_tempfile(persona)
+        vars_file = vars_to_tempfile(fixture["vars"])
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
         project_dir, language=language, vars_file=vars_file,
@@ -135,8 +144,8 @@ def main(argv=None):
     compiled_spec = compile_spec(project_dir, language=language, vars_file=vars_file)
 
     agent_model = case.get("model") or default_model(project_dir)
-    persona_model = persona.get("model") or default_model(project_dir,
-                                                          role="user_simulation")
+    persona_model = (persona or {}).get("model") or default_model(
+        project_dir, role="user_simulation")
     judge_model = default_model(project_dir, role="judge")
     max_turns = case.get("max_turns") or DEFAULT_MAX_TURNS
 
@@ -174,7 +183,7 @@ def main(argv=None):
     last_convo = None
     last_evals = []
     for _ in range(max(1, args.trials)):
-        dispatcher = make_dispatcher_from_persona(persona, name_map)
+        dispatcher = make_dispatcher(fixture["mocks"], name_map)
         convo = run_trial(client, agent_model, persona_model, system_prompt,
                          tool_schemas, dispatcher, name_map, persona_prompt,
                          max_turns, thinking=args.thinking)

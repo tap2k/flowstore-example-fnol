@@ -72,10 +72,10 @@ def name_to_id(agent_dict, project_dir=None):
 def load_persona(project_dir, persona_id):
     """Load tests/personas/<persona_id>.persona.json. None if not found.
 
-    A persona carries `system_prompt` + `vars` (free-form context-vars
-    dict) + `mocks` (capability_id -> {kind: static|error, returns/error}).
-    Cases bind a persona for their world; scripted cases also bind one
-    purely for vars+mocks (ignoring the persona's system_prompt).
+    A persona is a reusable actor: required `system_prompt` + the character-
+    INTRINSIC fixture (`vars` + `mocks`, keyed by capability_id). The
+    situational fixture lives on the case; a persona-bound case resolves to
+    `persona ∪ case` (see resolve_fixture).
     """
     if not persona_id:
         return None
@@ -85,40 +85,50 @@ def load_persona(project_dir, persona_id):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def persona_vars_to_tempfile(persona):
-    """Write the persona's vars to a temp JSON file and return its path.
+def resolve_fixture(persona, case):
+    """Effective fixture for a case = `persona ∪ case`.
 
-    compile_spec takes a --vars-file path; personas inline their vars, so
-    we materialize them to a temp file at the boundary. Returns None when
-    the persona has no vars.
+    `vars` merge per key; `mocks` replace per capability id; the case always
+    wins. A scripted / inline case (persona=None) resolves to just its own
+    fixture. Returns {"vars": {...}, "mocks": {...}}.
     """
-    if not persona:
-        return None
-    vars_dict = persona.get("vars")
+    persona = persona or {}
+    case = case or {}
+    vars_ = {**(persona.get("vars") or {}), **(case.get("vars") or {})}
+    mocks = {**(persona.get("mocks") or {}), **(case.get("mocks") or {})}
+    return {"vars": vars_, "mocks": mocks}
+
+
+def vars_to_tempfile(vars_dict):
+    """Write a vars dict to a temp JSON file and return its path.
+
+    compile_spec takes a --vars-file path; fixtures inline their vars, so we
+    materialize them to a temp file at the boundary. Returns None when empty.
+    """
     if not vars_dict:
         return None
     import tempfile
-    fd, path = tempfile.mkstemp(prefix="persona-vars-", suffix=".json")
+    fd, path = tempfile.mkstemp(prefix="fixture-vars-", suffix=".json")
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(vars_dict, f)
     return path
 
 
-def make_dispatcher_from_persona(persona, name_map):
-    """Build a dispatcher fn from a persona's mocks dict.
+def make_dispatcher(mocks, name_map):
+    """Build a dispatcher fn from a resolved `mocks` dict (capability_id ->
+    behavior {kind, returns|error}).
 
-    Persona.mocks maps capability_id -> behavior ({kind, returns|error}).
-    The dispatcher resolves the called tool name -> id -> behavior and
-    returns (result, error). Caps not in the persona yield a soft error
-    so the agent loop can keep going and the miss shows up in the transcript.
+    Resolves the called tool name -> id -> behavior and returns (result,
+    error). Caps with no mock yield a soft error so the agent loop can keep
+    going and the miss shows up in the transcript.
     """
-    mocks = (persona or {}).get("mocks", {}) or {}
+    mocks = mocks or {}
 
     def dispatch(capability_name, params):
         cid = name_map.get(capability_name, capability_name)
         behavior = mocks.get(cid)
         if behavior is None:
-            return None, f"no mock for capability '{cid}' in this persona's world"
+            return None, f"no mock for capability '{cid}' in this fixture"
         kind = behavior.get("kind")
         if kind == "error":
             return None, str(behavior.get("error", "mock error"))

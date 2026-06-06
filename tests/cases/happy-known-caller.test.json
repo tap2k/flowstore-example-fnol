@@ -2,7 +2,7 @@
   "$schema": "flowstore://test/case/v0",
   "id": "happy-known-caller",
   "name": "Pre-identified caller (persona vars seed name + policy)",
-  "notes": "Demonstrates pre-context: the bound known-caller persona's vars (caller_name, policy_number, now) are seeded into the compiled prompt, as if the caller was authenticated in the Northwind app before transfer. (Most fnol context is captured live; this shows the pre-context mechanism — it matters more for outbound agents. now is also seeded for stable date references.)",
+  "notes": "Demonstrates pre-context: the bound known-caller persona's vars (caller_name, policy_number, now) are seeded into the compiled prompt, as if the caller was authenticated in the Northwind app before transfer. (Most fnol context is captured live; this shows the pre-context mechanism \u2014 it matters more for outbound agents. now is also seeded for stable date references.)",
   "user_turns": [
     "Yeah, everyone's okay, I'm safe.",
     "It's still seven seven four two one zero nine.",
@@ -31,5 +31,32 @@
     "pre-context",
     "single-vehicle"
   ],
-  "persona_id": "known-caller"
+  "vars": {
+    "caller_name": "Jordan Reese",
+    "policy_number": "7742109",
+    "now": "2026-05-27"
+  },
+  "mocks": {
+    "cap_verify_policy": {
+      "kind": "static",
+      "returns": {
+        "policy_active": true,
+        "deductible_amount": 500,
+        "named_drivers": "Jordan Reese"
+      }
+    },
+    "cap_file_claim": {
+      "kind": "static",
+      "returns": {
+        "claim_id": "NW-2026-018472",
+        "estimated_callback_window": "2 hours"
+      }
+    },
+    "cap_schedule_adjuster": {
+      "kind": "static",
+      "returns": {
+        "ok": true
+      }
+    }
+  }
 }

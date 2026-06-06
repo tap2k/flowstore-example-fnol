@@ -1,6 +1,6 @@
 # AGENTS.md — Northwind FNOL intake agent (fnol)
 
-Context for anyone (human or AI) working in this repo. It explains what the project is, how a flowstore spec is structured, how to author and change it, and how to compile and test it. The spec data model is in [`schema/SCHEMA.md`](schema/SCHEMA.md); the on-disk layout in [`schema/FILE-MODEL.md`](schema/FILE-MODEL.md).
+Context for anyone (human or AI) working in this repo. It explains what the project is, how a flowstore spec is structured, how to author and change it, and how to compile and test it. The spec data model is in [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md); the on-disk layout in [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md), both in the public flowstore repo.
 
 ---
 
@@ -42,8 +42,7 @@ fnol/
 ├── comments/                      anchored review threads
 ├── models/defaults.json           default + judge/user-sim roles
 ├── prompts/                       AGENT-SPEC-PROMPT.txt, GOLD-EXTRACTION-PROMPT.txt
-├── schema/                        vendored SCHEMA.md + FILE-MODEL.md (the data model + file layout)
-├── tests/                         cases (10), decisions (2), gold (3), personas (10),
+├── tests/                         cases (11), decisions (2), gold (3), personas (3),
 │                                  rubrics (5), evaluators (6), runs
 └── scripts/                       Python test harness (Gemini)
 ```
@@ -80,11 +79,11 @@ The no-checkout way to compile and exercise the spec is the editor's **prompt mo
 
 ### The harness, in brief
 
-For batch/CI runs, the Python harness compiles via the `flowstore-compile` CLI, resolved through the `FLOWSTORE_COMPILE_CMD` override — a flowstore checkout's workspace script today, a bare `flowstore-compile` once the published CLI is available. Then it drives Gemini against the compiled prompt, dispatches the agent's tool calls through the bound persona's **mocks**, and writes a `flowstore://run/result/v0` file the editor's result viewer reads.
+For batch/CI runs, the Python harness compiles via the `flowstore-compile` CLI, resolved through the `FLOWSTORE_COMPILE_CMD` override — a flowstore checkout's workspace script today, a bare `flowstore-compile` once the published CLI is available. Then it drives Gemini against the compiled prompt, dispatches the agent's tool calls through the resolved fixture's **mocks** (`persona ∪ case`), and writes a `flowstore://run/result/v0` file the editor's result viewer reads.
 
 The model this repo uses:
 
-- **Personas own the world.** A `tests/personas/<id>.persona.json` carries seeded `vars` and per-capability `mocks` (`{ "kind": "static", "returns": {…} }` or `{ "kind": "error", "error": "…" }`), plus an optional `system_prompt` for LLM-as-user runs. A test case binds one by `persona_id` — a scripted case binds a *world-only* persona for vars+mocks; a persona-driven case binds a driver. There is no standalone mock file.
+- **Fixture is scoped across persona ∪ case.** A test case names one actor — scripted `user_turns`, a referenced `persona_id`, or an inline `system_prompt` — plus the **situational** fixture (`vars` + per-capability `mocks`) for its scenario. A `tests/personas/<id>.persona.json` is a reusable actor: a required `system_prompt` plus the **character-intrinsic** fixture. A persona-bound case resolves to `persona ∪ case` (vars merge per key, mocks replace per capability id, case wins). Mock behaviors are `{ "kind": "static", "returns": {…} }` or `{ "kind": "error", "error": "…" }`; there is no standalone mock file.
 - **Assertions.** `assertions` (per-turn substrings), `transcript_assertions` (whole-transcript predicates), `state_assertions` (final variable scope — runner target only), and `capability_assertions` (`{capability, invoked}`, deterministic over the recorded tool calls — the load-bearing way to pin "filed the claim" / "did NOT file mid-emergency").
 - **Targets.** The default compiled-prompt target is self-contained; a native flowstore **runner** target additionally tracks variable scope, fires exit actions, and executes `retrieve_on_turn` (so `state_assertions` and the retrieval capability evaluate there).
 - **The loop.** Capture/author a **gold** (`prompts/GOLD-EXTRACTION-PROMPT.txt`) → derive a **case** → compile → run → read the transcript and diagnose. The two docs above go deep on each step.
@@ -106,8 +105,8 @@ cp .env.example .env   # then fill in GOOGLE_API_KEY + FLOWSTORE_COMPILE_CMD; th
 - **Spec is LLM-agnostic.** Don't hard-code a model vendor in the spec; the runtime LLM is chosen at execution, not in the spec.
 - **Safety gate first.** The defining behavioral invariant is that `flow_safety_triage` resolves before any policy/paperwork (`gr_st_safety_gate`); guard it with paired positive/negative assertions and treat any regression as a real failure.
 - **Capability id vs name.** Mocks, `capability_assertions`, and recorded calls all key on the stable capability **id** (`cap_file_claim`), not the runtime tool `name` (`file_claim`).
-- **Keep fixture and logic changes separate.** Don't change a persona's `vars`/`mocks` and a flow's `instructions` in the same commit — you can't tell which moved the result.
-- **The vendored `schema/` copies are the contract.** If the data model changes upstream, re-vendor `schema/SCHEMA.md` + `schema/FILE-MODEL.md` rather than editing them ad hoc.
+- **Keep fixture and logic changes separate.** Don't change a fixture (`vars`/`mocks` on a persona or case) and a flow's `instructions` in the same commit — you can't tell which moved the result.
+- **The data model lives in the public flowstore repo** ([SCHEMA.md](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md), [FILE-MODEL.md](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md)) — no longer vendored here. Treat those as the contract.
 
 ---
 
@@ -115,6 +114,6 @@ cp .env.example .env   # then fill in GOOGLE_API_KEY + FLOWSTORE_COMPILE_CMD; th
 
 - [`docs/testing-from-scripts.md`](docs/testing-from-scripts.md) — testing mechanics (file shapes, runner, mock dispatch).
 - [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — test-first prompt-engineering methodology.
-- [`schema/SCHEMA.md`](schema/SCHEMA.md) — the spec data model (authoritative).
-- [`schema/FILE-MODEL.md`](schema/FILE-MODEL.md) — how a flowstore project decomposes into files on disk.
+- [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md) — the spec data model (authoritative; public flowstore repo).
+- [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md) — how a flowstore project decomposes into files on disk.
 - [`README.md`](README.md) — the human onramp: editor walkthrough, feature→file map, quickstart.

@@ -215,8 +215,8 @@ def main(argv=None):
 
     # --- SDK + harness internals imported only after arg parsing -----------
     from _agent import (default_model, load_persona, make_client,
-                        make_dispatcher_from_persona, name_to_id,
-                        resolve_paths, persona_vars_to_tempfile, Conversation)
+                        make_dispatcher, name_to_id, resolve_fixture,
+                        resolve_paths, vars_to_tempfile, Conversation)
     from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
@@ -227,14 +227,15 @@ def main(argv=None):
     project_dir = resolve_paths(case_path)
 
     language = args.language or case.get("language")
-    # Persona supplies the world (vars + mocks). Scripted cases bind a
-    # persona purely for that — the persona's system_prompt is ignored.
+    # A scripted case carries its fixture inline; a bound persona (if any)
+    # contributes its intrinsic fixture, with the case overriding per key.
     persona = load_persona(project_dir, case.get("persona_id"))
+    fixture = resolve_fixture(persona, case)
     vars_file = args.vars_file
     if vars_file:
         vars_file = str(Path(vars_file).resolve())
-    elif persona:
-        vars_file = persona_vars_to_tempfile(persona)
+    else:
+        vars_file = vars_to_tempfile(fixture["vars"])
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
         project_dir, language=language, vars_file=vars_file,
@@ -244,7 +245,7 @@ def main(argv=None):
 
     model = case.get("model") or default_model(project_dir)
     name_map = name_to_id(agent_dict, project_dir=project_dir)
-    dispatcher = make_dispatcher_from_persona(persona, name_map)
+    dispatcher = make_dispatcher(fixture["mocks"], name_map)
 
     client = make_client()
     convo = Conversation(client, model, system_prompt, tool_schemas,

@@ -1,6 +1,6 @@
 # Test-driven prompt engineering
 
-Audience: anyone authoring or iterating on this fnol agent — designers, prompt authors, engineers. This doc is the methodology for *using* the test harness in `scripts/` as a development loop. For the harness mechanics (file shapes, the runner CLIs, mock dispatch, the `result.json` contract) see the sibling doc [testing-from-scripts.md](testing-from-scripts.md). For the project overview, the feature→file map, and the compile/run quickstart, see the [README](../README.md). The data model is in [`schema/SCHEMA.md`](../schema/SCHEMA.md); the on-disk file layout in [`schema/FILE-MODEL.md`](../schema/FILE-MODEL.md).
+Audience: anyone authoring or iterating on this fnol agent — designers, prompt authors, engineers. This doc is the methodology for *using* the test harness in `scripts/` as a development loop. For the harness mechanics (file shapes, the runner CLIs, mock dispatch, the `result.json` contract) see the sibling doc [testing-from-scripts.md](testing-from-scripts.md). For the project overview, the feature→file map, and the compile/run quickstart, see the [README](../README.md). The data model is in [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md); the on-disk file layout in [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md) (public flowstore repo).
 
 The shorter version: **write the conversations you want before the prompt that produces them, then iterate the spec / generator / runtime until the harness goes green.** The full version is below.
 
@@ -146,7 +146,7 @@ $FLOWSTORE_COMPILE_CMD "$PWD" --format spec
 
 This compile step is the layer you'll iterate on most often once the cases exist. Three things you can change here, in order of cost:
 
-- **Persona world** (cheap) — edit the bound persona's `vars` / `mocks` in `tests/personas/<id>.persona.json`. Useful for "what does the open look like if `caller_name` and `policy_number` are already known?" or "what happens when `cap_file_claim` errors?"
+- **Fixture** (cheap) — edit the situational `vars` / `mocks` on the case (`tests/cases/<id>.test.json`), or the character-intrinsic ones on a persona (`tests/personas/<id>.persona.json`). Useful for "what does the open look like if `caller_name` and `policy_number` are already known?" or "what happens when `cap_file_claim` errors?"
 - **Spec content** (medium) — edit `flows/*.flow.json`, the per-flow `*.scripts.csv`, `knowledge/`, or the `guardrails/*.json`. Each change re-compiles instantly; re-run the suite to see effect.
 - **Prompt generator** (high) — change the flowstore compiler itself (in the flowstore checkout `FLOWSTORE_COMPILE_CMD` points at). Affects every spec, not just fnol. Reserve for class-of-problem fixes, not one-off tweaks.
 
@@ -226,7 +226,7 @@ Order of investigation (cheapest first):
 
 1. **The assertion.** Is it on the right turn? (`assertions[].turn` is 1-indexed into the *agent-only* subsequence — turn 1 is the opening greeting.) Is the substring distinctive enough? Did the model paraphrase a script and your literal assertion is too tight? Should this be a rubric instead?
 
-2. **The persona world (vars + mocks).** Is the bound persona right for the scenario? Are its `vars` correct, and does each capability mock return the result this routing decision needs — e.g. `cap_verify_policy` returning `policy_active: true` for a happy path vs a not-found result for the policy-not-found case? A wrong persona makes a routing assertion impossible to satisfy. (The decision tests show this: `policy-not-found-routing` binds a persona whose `cap_verify_policy` mock returns not-found, so every branch lands in `flow_policy_not_found`.)
+2. **The fixture (vars + mocks).** Is the resolved fixture (`persona ∪ case`) right for the scenario? Are the `vars` correct, and does each capability mock return the result this routing decision needs — e.g. `cap_verify_policy` returning `policy_active: true` for a happy path vs a not-found result for the policy-not-found case? A wrong fixture makes a routing assertion impossible to satisfy. (The decision tests show this: `policy-not-found-routing` carries a `cap_verify_policy` mock that returns not-found, so every branch lands in `flow_policy_not_found`.)
 
 3. **The spec — flow content.** Did the routing condition on the relevant exit_path match what the caller said? For LLM-method exits (most of them), is the condition's `expression` clear? For calculation-method exits (the safety gate `xp_st_to_defer`, the `flow_route_verified` branches), is the variable it reads actually being set? Is the flow's `instructions` field unambiguous about what to do in this case?
 

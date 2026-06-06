@@ -1,16 +1,16 @@
 {
   "$schema": "flowstore://test/case/v0",
   "id": "es-happy-claim",
-  "name": "Reclamación en español — ruta feliz (es-US)",
+  "name": "Reclamaci\u00f3n en espa\u00f1ol \u2014 ruta feliz (es-US)",
   "notes": "Multilingual case: language es-US makes the runner compile the Spanish prompt (flowstore-compile --language es-US). The caller speaks Spanish through a straightforward happy path; the agent must respond in Spanish and reach a filed claim.",
   "user_turns": [
-    "Sí, todos estamos bien, estoy en un lugar seguro.",
-    "Casey Lin, póliza tres cero nueve ocho ocho uno dos.",
-    "Sí, correcto.",
-    "Hace una hora me chocaron por detrás en un semáforo. No vino la policía.",
-    "Solo mi carro, la defensa trasera, pero todavía se maneja. No hubo otro auto.",
-    "Sí, puedo enviar fotos.",
-    "Sí, así es.",
+    "S\u00ed, todos estamos bien, estoy en un lugar seguro.",
+    "Casey Lin, p\u00f3liza tres cero nueve ocho ocho uno dos.",
+    "S\u00ed, correcto.",
+    "Hace una hora me chocaron por detr\u00e1s en un sem\u00e1foro. No vino la polic\u00eda.",
+    "Solo mi carro, la defensa trasera, pero todav\u00eda se maneja. No hubo otro auto.",
+    "S\u00ed, puedo enviar fotos.",
+    "S\u00ed, as\u00ed es.",
     "Cinco cinco cinco uno dos uno dos, lo antes posible."
   ],
   "transcript_assertions": [
@@ -37,5 +37,27 @@
     "multilingual",
     "es"
   ],
-  "persona_id": "happy-claim"
+  "mocks": {
+    "cap_verify_policy": {
+      "kind": "static",
+      "returns": {
+        "policy_active": true,
+        "deductible_amount": 500,
+        "named_drivers": "Casey Lin, Pat Lin"
+      }
+    },
+    "cap_file_claim": {
+      "kind": "static",
+      "returns": {
+        "claim_id": "NW-2026-018472",
+        "estimated_callback_window": "2 hours"
+      }
+    },
+    "cap_schedule_adjuster": {
+      "kind": "static",
+      "returns": {
+        "ok": true
+      }
+    }
+  }
 }

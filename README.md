@@ -202,8 +202,9 @@ Every `.json` carries a `$schema` URI and is validated on load.
 | `state_assertions` (final variable scope) | `happy-claim-filed` (runtime-only — see notes) |
 | `capability_assertions` (`invoked` true/false) | `happy-claim-filed`; decision branches in `policy-not-found-routing` |
 | Gold standard + `gold_id` | `tests/gold/*` ← `happy-claim-filed`, `emergency-defer`, `policy-not-found-retry` |
-| Persona owns the world (`vars` + `mocks`) | every case ← `tests/personas/*` |
-| Persona `vars` (pre-populated context) | `happy-known-caller` ← `tests/personas/known-caller.persona.json` |
+| Situational fixture (`vars` + `mocks` on the case) | `happy-claim-filed`, `filing-system-error`, … |
+| Intrinsic fixture on a persona (`persona ∪ case` merge) | `persona-panicking` ← `tests/personas/panicking-caller.persona.json` |
+| Case `vars` (pre-populated context) | `happy-known-caller` |
 | Persona-driven case (LLM-as-user `system_prompt`) | `tests/cases/persona-*` ← `tests/personas/{panicking-caller,impatient-wants-human,redteam-fault-fishing}` |
 | Decision test (routing matrix) | `tests/decisions/*` |
 | LLM-judge rubric | `tests/rubrics/*` |
@@ -296,7 +297,7 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
 - [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — authoring agent prompts test-first.
 - [`prompts/GOLD-EXTRACTION-PROMPT.txt`](prompts/GOLD-EXTRACTION-PROMPT.txt) — the LLM prompt that turns source material (transcripts, scripts, docs) into `tests/gold/*.gold.json` records.
 
-**New to flowstore?** It's a behavioral spec format for conversational agents — a graph of *flows* connected by *exit paths*, decomposed into per-concern files in a Git repo (what you see here). The authoritative spec data model is [`schema/SCHEMA.md`](schema/SCHEMA.md) and the on-disk layout is [`schema/FILE-MODEL.md`](schema/FILE-MODEL.md), vendored into this repo; this project is a worked instance of both.
+**New to flowstore?** It's a behavioral spec format for conversational agents — a graph of *flows* connected by *exit paths*, decomposed into per-concern files in a Git repo (what you see here). The authoritative spec data model is [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md) and the on-disk layout is [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md) in the public flowstore repo; this project is a worked instance of both.
 
 ---
 

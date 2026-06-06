@@ -1,10 +1,10 @@
 {
   "$schema": "flowstore://test/case/v0",
   "id": "emergency-defer",
-  "name": "Serious injury reported — agent defers to 911 and offers callback",
+  "name": "Serious injury reported \u2014 agent defers to 911 and offers callback",
   "notes": "Sad path: caller reports a serious injury, so the calculation-routed safety exit fires into flow_defer_emergency. The agent must urge 911 before any intake and offer a one-hour human callback. Per-turn assertion pins the 911 prompt to the agent's response to the injury report; capability_assertions verify the agent scheduled a callback but never reached the intake path to file a claim.",
   "user_turns": [
-    "No, my passenger is hurt — I think her arm is broken, there's blood.",
+    "No, my passenger is hurt \u2014 I think her arm is broken, there's blood.",
     "Yes, please have someone call me."
   ],
   "assertions": [
@@ -53,5 +53,12 @@
     "emergency",
     "src:gold:emergency_defer"
   ],
-  "persona_id": "emergency-defer"
+  "mocks": {
+    "cap_schedule_adjuster": {
+      "kind": "static",
+      "returns": {
+        "ok": true
+      }
+    }
+  }
 }

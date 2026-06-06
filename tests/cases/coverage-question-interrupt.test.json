@@ -2,11 +2,11 @@
   "$schema": "flowstore://test/case/v0",
   "id": "coverage-question-interrupt",
   "name": "Caller asks a coverage question mid-intake (policy-question interrupt)",
-  "notes": "Triggers int_policy_question: the caller asks about rental coverage during intake. The agent answers generically from the FAQ, defers per-policy specifics and any premium impact to the adjuster, then returns to the claim. NOTE: retrieve_on_turn (cap_lookup_coverage) is a runtime behavior — it fires under a native runner, not under this prompt-target harness, so the answer here comes from the FAQ alone.",
+  "notes": "Triggers int_policy_question: the caller asks about rental coverage during intake. The agent answers generically from the FAQ, defers per-policy specifics and any premium impact to the adjuster, then returns to the claim. NOTE: retrieve_on_turn (cap_lookup_coverage) is a runtime behavior \u2014 it fires under a native runner, not under this prompt-target harness, so the answer here comes from the FAQ alone.",
   "user_turns": [
     "I'm fine, somewhere safe.",
     "Casey Lin, policy three oh nine eight eight one two.",
-    "Yes. Quick question before we go on — will my insurance cover a rental while the car's in the shop?",
+    "Yes. Quick question before we go on \u2014 will my insurance cover a rental while the car's in the shop?",
     "Got it. And will this make my premium go up?",
     "Okay, let's keep going with the claim."
   ],
@@ -28,5 +28,14 @@
     "coverage",
     "no-speculation"
   ],
-  "persona_id": "coverage-question-interrupt"
+  "mocks": {
+    "cap_verify_policy": {
+      "kind": "static",
+      "returns": {
+        "policy_active": true,
+        "deductible_amount": 500,
+        "named_drivers": "Casey Lin, Pat Lin"
+      }
+    }
+  }
 }

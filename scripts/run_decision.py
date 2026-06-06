@@ -69,9 +69,9 @@ def main(argv=None):
                         help="Enable Gemini Flash thinking (default: off).")
     args = parser.parse_args(argv)
 
-    from _agent import (default_model, load_persona, make_client,
-                        make_dispatcher_from_persona, name_to_id,
-                        resolve_paths, persona_vars_to_tempfile, Conversation)
+    from _agent import (default_model, make_client, make_dispatcher,
+                        name_to_id, resolve_fixture, resolve_paths,
+                        vars_to_tempfile, Conversation)
     from _compile import compile_prompt
     from _eval import eval_capability_assertions, load_json
 
@@ -80,14 +80,14 @@ def main(argv=None):
     project_dir = resolve_paths(dec_path)
 
     language = args.language or dec.get("language")
-    # Decisions optionally bind a persona for the world (vars + mocks);
-    # system_prompt is unused — branches script their own inputs.
-    persona = load_persona(project_dir, dec.get("persona_id"))
+    # Decision tests carry their fixture (vars + mocks) inline — they have no
+    # actor (the branches script their own inputs), so there's no persona.
+    fixture = resolve_fixture(None, dec)
     vars_file = args.vars_file
     if vars_file:
         vars_file = str(Path(vars_file).resolve())
-    elif persona:
-        vars_file = persona_vars_to_tempfile(persona)
+    else:
+        vars_file = vars_to_tempfile(fixture["vars"])
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
         project_dir, language=language, vars_file=vars_file,
@@ -102,7 +102,7 @@ def main(argv=None):
     branches_out = []
     for branch in dec.get("branches", []) or []:
         # Fresh conversation per branch so they don't bleed into each other.
-        dispatcher = make_dispatcher_from_persona(persona, name_map)
+        dispatcher = make_dispatcher(fixture["mocks"], name_map)
         convo = Conversation(client, model, system_prompt, tool_schemas,
                             dispatcher, name_map, thinking=args.thinking)
         convo.agent_reply(None)            # implicit opening agent turn

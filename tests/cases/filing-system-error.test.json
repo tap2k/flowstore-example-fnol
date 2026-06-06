@@ -1,14 +1,14 @@
 {
   "$schema": "flowstore://test/case/v0",
   "id": "filing-system-error",
-  "name": "Claims backend errors on file — agent recovers without fabricating",
+  "name": "Claims backend errors on file \u2014 agent recovers without fabricating",
   "notes": "Robustness path: verify_policy is active, but cap_file_claim raises (system_error mock). claim_id never binds, so the agent must NOT invent a claim id; it should apologize, say the claim wasn't filed, and offer a human. Demonstrates the error-behavior mock kind + instruction-guided recovery in flow_schedule_adjuster. capability_assertions confirm the agent actually attempted cap_file_claim (so the error path is what's exercised) and escalated via cap_transfer_to_human.",
   "user_turns": [
     "Everyone's fine, I'm safe.",
     "Pat Lin, policy three oh nine eight eight one two.",
     "Yes, that's right.",
     "Got rear-ended on the highway an hour ago, the other driver stopped. No police.",
-    "Just my car — back bumper, still drivable. The other driver was Sam Avery.",
+    "Just my car \u2014 back bumper, still drivable. The other driver was Sam Avery.",
     "Yeah I'll send photos.",
     "Yes, that all sounds right.",
     "Yes, please get me a person."
@@ -51,5 +51,24 @@
     "capability-error",
     "no-fabrication"
   ],
-  "persona_id": "filing-system-error"
+  "mocks": {
+    "cap_verify_policy": {
+      "kind": "static",
+      "returns": {
+        "policy_active": true,
+        "deductible_amount": 500,
+        "named_drivers": "Casey Lin, Pat Lin"
+      }
+    },
+    "cap_file_claim": {
+      "kind": "error",
+      "error": "claims_backend_unavailable: 503"
+    },
+    "cap_transfer_to_human": {
+      "kind": "static",
+      "returns": {
+        "ok": true
+      }
+    }
+  }
 }
