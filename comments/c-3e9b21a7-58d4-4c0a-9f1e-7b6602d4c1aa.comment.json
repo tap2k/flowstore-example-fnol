@@ -5,10 +5,8 @@
     "kind": "exit_path",
     "id": "xp_st_to_defer"
   },
-  "thread_id": "t-3e9b21a7-58d4",
-  "parent_id": null,
   "author": "neil",
   "timestamp": "2026-06-01T20:03:41.118Z",
-  "body": "Confirming this stays a calculation exit, not llm — compliance signed off on the 911 deferral on the basis that the trigger is deterministic and auditable. If anyone is tempted to soften it to an llm judgment later, that needs to come back through review.",
-  "resolved_by": null
+  "body": "Confirming this stays a calculation exit, not llm \u2014 compliance signed off on the 911 deferral on the basis that the trigger is deterministic and auditable. If anyone is tempted to soften it to an llm judgment later, that needs to come back through review.",
+  "resolved": false
 }
