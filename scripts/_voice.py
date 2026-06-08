@@ -93,3 +93,15 @@ def barge_in_prefix(reply: str, *, seed: int = 0) -> str:
     rng = _rng(seed, reply)
     cut = max(1, int(len(words) * rng.uniform(0.3, 0.7)))
     return " ".join(words[:cut])
+
+
+def resolve_voice(cli_voice, modality):
+    """Effective voice-realism for a run.
+
+    An explicit --voice/--no-voice (cli_voice True/False) wins. When unset
+    (None), derive from the agent's modality: voice/multimodal -> on, text -> off
+    (defaulting to voice when modality is missing).
+    """
+    if cli_voice is not None:
+        return cli_voice
+    return (modality or "voice") in ("voice", "multimodal")

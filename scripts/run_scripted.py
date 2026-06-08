@@ -202,16 +202,16 @@ def main(argv=None):
                         help="path to a variables override file")
     parser.add_argument("--thinking", action="store_true",
                         help="Enable Gemini Flash thinking (default: off).")
-    parser.add_argument("--voice", action="store_true",
+    parser.add_argument("--voice", action=argparse.BooleanOptionalAction, default=None,
                         help="Voice-realistic simulation (T1): ASR-shape user turns "
                              "(lowercase/de-punctuate, optional disfluencies) and honor "
-                             "barge_in turns. Forces thinking off. See planning/voice-testing.md.")
+                             "barge_in turns. Default: derived from the agent's meta.modality "
+                             "(voice/multimodal -> on, text -> off); pass --voice/--no-voice to "
+                             "override. See planning/voice-testing.md.")
     parser.add_argument("--voice-level", choices=["clean", "light", "heavy"], default="clean",
                         help="ASR-shaping intensity under --voice: 'clean' (default), "
                              "'light' (+ filler), 'heavy' (+ a false start).")
     args = parser.parse_args(argv)
-    if args.voice and args.thinking:
-        parser.error("--voice forces thinking off (voice-realistic); drop --thinking.")
 
     # --- SDK + harness internals imported only after arg parsing -----------
     from _agent import (default_model, load_persona, make_client,
@@ -225,6 +225,16 @@ def main(argv=None):
     case_path = Path(args.case).resolve()
     case = load_json(case_path)
     project_dir = resolve_paths(case_path)
+
+    # Voice-realism defaults to the agent's declared modality; --voice/--no-voice overrides.
+    _agent_path = project_dir / "agent.json"
+    _modality = (load_json(_agent_path).get("meta") or {}).get("modality") if _agent_path.exists() else None
+    effective_voice = _voice.resolve_voice(args.voice, _modality)
+    if not effective_voice and any(
+        isinstance(t, dict) and t.get("barge_in") for t in (case.get("user_turns") or [])
+    ):
+        print("warning: case has barge_in turns but voice mode is off — they will be ignored.",
+              file=sys.stderr)
 
     language = args.language or case.get("language")
     # A scripted case carries its fixture inline; a bound persona (if any)
@@ -257,14 +267,14 @@ def main(argv=None):
     for idx, (user_text, is_barge) in enumerate(
         _voice.expand_user_turns(case.get("user_turns", []) or [])
     ):
-        if args.voice:
+        if effective_voice:
             user_text = _voice.asr_shape(
                 user_text, language, seed=idx, level=args.voice_level
             )
         # Barge-in: the caller talks over the agent, so it only "heard" a prefix
         # of the prior reply. fnol drives the compiled prompt directly (no live
         # session), so we can rewrite history + transcript to that prefix.
-        if is_barge and args.voice and prev_reply:
+        if is_barge and effective_voice and prev_reply:
             convo.truncate_last_reply(_voice.barge_in_prefix(prev_reply, seed=idx))
         convo.agent_reply(user_text, barge_in=is_barge)
         prev_reply = convo.transcript[-1]["content"] if convo.transcript else ""
@@ -277,8 +287,8 @@ def main(argv=None):
         "agent_id": agent_dict.get("id"),
         "model": model,
         "prompt_source": prompt_source,
-        "voice": bool(args.voice),
-        "voice_level": args.voice_level if args.voice else None,
+        "voice": effective_voice,
+        "voice_level": args.voice_level if effective_voice else None,
         "transcript": convo.transcript,
         "capability_calls": convo.capability_calls,
         "final_variables": {},  # empty on the compiled-prompt target (no scope)

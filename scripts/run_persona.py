@@ -69,6 +69,11 @@ def _persona_reply(client, model, persona_prompt, transcript):
     return (resp.text or "").strip()
 
 
+import re as _re
+
+_DONE_RE = _re.compile(r"\[done\]", _re.IGNORECASE)
+
+
 def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
               dispatcher, name_map, persona_prompt, max_turns, thinking=False):
     """Run one full persona conversation; return the Conversation."""
@@ -82,10 +87,16 @@ def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
     while agent_turns < max_turns:
         user_line = _persona_reply(client, persona_model, persona_prompt,
                                   convo.transcript)
+        # Honor the [DONE] stop marker (same convention as the flowstore sim):
+        # strip it, deliver any remaining text, then end the conversation.
+        done = bool(_DONE_RE.search(user_line))
+        user_line = _DONE_RE.sub("", user_line).strip()
         if not user_line:
             break
         convo.agent_reply(user_line)
         agent_turns += 1
+        if done:
+            break
     return convo
 
 
