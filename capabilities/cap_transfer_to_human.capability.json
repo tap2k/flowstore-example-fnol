@@ -5,5 +5,6 @@
   "description": "Bail out to a live claims agent. Terminal — runner ends after firing.",
   "kind": "function",
   "inputs": ["caller_name", "policy_number", "claim_id"],
-  "outputs": []
+  "outputs": [],
+  "ends_conversation": true
 }

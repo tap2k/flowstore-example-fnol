@@ -75,7 +75,8 @@ _DONE_RE = _re.compile(r"\[done\]", _re.IGNORECASE)
 
 
 def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
-              dispatcher, name_map, persona_prompt, max_turns, thinking=False):
+              dispatcher, name_map, persona_prompt, max_turns, thinking=False,
+              terminal_ids=frozenset()):
     """Run one full persona conversation; return the Conversation."""
     from _agent import Conversation
 
@@ -97,6 +98,11 @@ def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
         agent_turns += 1
         if done:
             break
+        # The agent invoked an ends_conversation capability — it hung up.
+        if terminal_ids and any(
+            c.get("capability") in terminal_ids for c in convo.capability_calls
+        ):
+            break
     return convo
 
 
@@ -115,7 +121,7 @@ def main(argv=None):
 
     from _agent import (default_model, load_persona, make_client,
                         make_dispatcher, name_to_id, resolve_fixture,
-                        resolve_paths, vars_to_tempfile)
+                        resolve_paths, terminal_capability_ids, vars_to_tempfile)
     from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
@@ -197,7 +203,8 @@ def main(argv=None):
         dispatcher = make_dispatcher(fixture["mocks"], name_map)
         convo = run_trial(client, agent_model, persona_model, system_prompt,
                          tool_schemas, dispatcher, name_map, persona_prompt,
-                         max_turns, thinking=args.thinking)
+                         max_turns, thinking=args.thinking,
+                         terminal_ids=terminal_capability_ids(agent_dict))
         evals = evaluate_convo(convo)
         last_convo, last_evals = convo, evals
         trials_out.append({

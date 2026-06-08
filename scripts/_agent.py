@@ -230,6 +230,17 @@ def build_gemini_tools(tool_schemas):
 MAX_TOOL_ITERS = 8
 
 
+def terminal_capability_ids(agent_dict: dict) -> set[str]:
+    """IDs of capabilities flagged `ends_conversation` — the agent invoking one
+    is its "hang up", so the prompt-mode loop should stop after that turn. Mirrors
+    the runner raising a terminal SessionEnded and the editor sim ending."""
+    return {
+        c["id"]
+        for c in (agent_dict.get("capabilities") or [])
+        if isinstance(c, dict) and c.get("ends_conversation") and c.get("id")
+    }
+
+
 class Conversation:
     """Holds dialogue state for one agent run and exposes agent_reply().
 

@@ -216,7 +216,8 @@ def main(argv=None):
     # --- SDK + harness internals imported only after arg parsing -----------
     from _agent import (default_model, load_persona, make_client,
                         make_dispatcher, name_to_id, resolve_fixture,
-                        resolve_paths, vars_to_tempfile, Conversation)
+                        resolve_paths, terminal_capability_ids, vars_to_tempfile,
+                        Conversation)
     from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
@@ -255,6 +256,7 @@ def main(argv=None):
 
     model = case.get("model") or default_model(project_dir)
     name_map = name_to_id(agent_dict, project_dir=project_dir)
+    terminal_ids = terminal_capability_ids(agent_dict)
     dispatcher = make_dispatcher(fixture["mocks"], name_map)
 
     client = make_client()
@@ -278,6 +280,11 @@ def main(argv=None):
             convo.truncate_last_reply(_voice.barge_in_prefix(prev_reply, seed=idx))
         convo.agent_reply(user_text, barge_in=is_barge)
         prev_reply = convo.transcript[-1]["content"] if convo.transcript else ""
+        # The agent invoked an ends_conversation capability — it hung up.
+        if terminal_ids and any(
+            c.get("capability") in terminal_ids for c in convo.capability_calls
+        ):
+            break
 
     prompt_source = args.system_prompt if args.system_prompt else "flowstore-compile"
     result = {
