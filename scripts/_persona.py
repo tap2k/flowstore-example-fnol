@@ -4,9 +4,11 @@ medcomm-flowstore and flowstore-example-fnol.
 Everything for driving the simulated-user side of a test lives here:
 
 1. compose_persona_prompt — byte-for-byte mirror of flowstore's
-   composePersonaPrompt (identity+scenario · traits · medium rail). Pure string
-   templating, so it mirrors the TS exactly; pinned by the compose golden below
-   and by flowstore/packages/core/test/personaRail.test.ts.
+   composePersonaPrompt (identity+scenario · medium rail). Traits are NOT inlined
+   into the prompt — they're open machine-read knobs (asr, barge_in, or
+   client-specific), handled by the caller. Pure string templating, so it mirrors
+   the TS exactly; pinned by the compose golden below and by
+   flowstore/packages/core/test/personaRail.test.ts.
 
 2. asr_shape / barge_in_prefix — the seeded channel-perturbation transforms
    (ASR de-punctuation, fillers, barge-in truncation). These are NOT mirrored in
@@ -64,36 +66,11 @@ def default_persona_instructions(modality: str) -> str:
     ])
 
 
-def _render_trait_value(v: object) -> str:
-    # Match JS template-string coercion: booleans render lowercase
-    # ("true"/"false"), not Python's "True"/"False".
-    if isinstance(v, bool):
-        return "true" if v else "false"
-    return str(v)
-
-
-def render_traits(traits: dict | None) -> str:
-    """Open `traits` bag → a `- key: value` block. Mirrors renderTraits()."""
-    if not traits:
-        return ""
-    lines = [f"- {k}: {_render_trait_value(v)}" for k, v in traits.items()]
-    if not lines:
-        return ""
-    return "\n\nThis user's traits:\n" + "\n".join(lines)
-
-
-def compose_persona_prompt(
-    persona_prompt: str,
-    modality: str,
-    traits: dict | None = None,
-) -> str:
-    """identity + scenario · traits block · medium rail. Mirrors
-    composePersonaPrompt(). The one function to keep in sync across harnesses."""
-    return (
-        f"{persona_prompt.strip()}"
-        f"{render_traits(traits)}"
-        f"\n\n{default_persona_instructions(modality)}"
-    )
+def compose_persona_prompt(persona_prompt: str, modality: str) -> str:
+    """identity + scenario · medium rail. Mirrors composePersonaPrompt(). Traits
+    are NOT inlined into the prompt — they're open, machine-read knobs (asr,
+    barge_in, or client-specific), handled by the caller, not pasted as prose."""
+    return f"{persona_prompt.strip()}\n\n{default_persona_instructions(modality)}"
 
 
 # ── Channel perturbation (seeded; regression-path only) ──────────────────────
@@ -210,31 +187,18 @@ _GOLDEN_VOICE = (
     "any final thanks or goodbye — or if you give up."
 )
 
-_GOLDEN_FULL = (
-    "You are Ana, an overdue borrower who can pay tomorrow.\n\n"
-    "This user's traits:\n"
-    "- compliance: cooperative\n"
-    "- patience: impatient\n"
-    "- barge_in: 0.4\n\n"
-) + _GOLDEN_VOICE
-
-
 def _self_check() -> None:
+    # The rail is the only non-trivial part of the prompt and the real cross-repo
+    # contract; pin it per modality. compose is just strip + rail now (traits are
+    # not inlined), so one structural check on the wrapper is enough.
     got_voice = default_persona_instructions("voice")
     assert got_voice == _GOLDEN_VOICE, (
         "voice rail drifted from flowstore golden:\n"
         f"--- got ---\n{got_voice}\n--- want ---\n{_GOLDEN_VOICE}"
     )
     assert default_persona_instructions("multimodal") == _GOLDEN_VOICE
-    got_full = compose_persona_prompt(
-        "  You are Ana, an overdue borrower who can pay tomorrow.  ",
-        "voice",
-        {"compliance": "cooperative", "patience": "impatient", "barge_in": 0.4},
-    )
-    assert got_full == _GOLDEN_FULL, (
-        "full compose drifted from flowstore golden:\n"
-        f"--- got ---\n{got_full}\n--- want ---\n{_GOLDEN_FULL}"
-    )
+    composed = compose_persona_prompt("  You are Ana.  ", "voice")
+    assert composed == "You are Ana.\n\n" + _GOLDEN_VOICE, f"compose drifted:\n{composed}"
     print("_persona.py conformance: OK (matches flowstore golden)")
 
 
