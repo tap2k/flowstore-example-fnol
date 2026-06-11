@@ -34,6 +34,15 @@ import random
 import re
 from typing import Iterator
 
+# Appended to the (barge-trimmed) agent line so the persona knows it's cutting in
+# having only half-heard — and asserts its own thing instead of smoothly
+# answering a question it didn't actually hear. Keep byte-identical with
+# flowstore's BARGE_CUE in personaClient.ts.
+BARGE_CUE = (
+    "\n\n(You cut in here, before the agent finished — you only caught the start "
+    "of that line. Say what you want; don't wait for them.)"
+)
+
 
 def default_persona_instructions(modality: str) -> str:
     """The single non-parametrized rail per modality. Mirrors

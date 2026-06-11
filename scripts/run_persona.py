@@ -40,13 +40,17 @@ def _utc_stamp():
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
-def _persona_reply(client, model, persona_prompt, transcript):
+def _persona_reply(client, model, persona_prompt, transcript, barged=False):
     """Generate the simulated user's next line given the dialogue so far.
 
     The persona's system_prompt is the system instruction; the agent's turns are
     presented as the "model" side and the user's prior turns as the "user" side,
     so from the persona-LLM's perspective it is replying to the agent. We invert
     roles relative to the agent transcript: agent->user input, persona->model.
+
+    When `barged`, the last (trimmed) agent line gets the barge cue so the
+    persona knows it's cutting in rather than smoothly answering what it
+    didn't hear.
     """
     from google.genai import types
 
@@ -60,6 +64,10 @@ def _persona_reply(client, model, persona_prompt, transcript):
             # The persona's own prior line.
             contents.append(types.Content(
                 role="model", parts=[types.Part.from_text(text=turn["content"])]))
+    if barged and contents and contents[-1].role == "user":
+        from _persona import BARGE_CUE
+        cued = (contents[-1].parts[0].text or "") + BARGE_CUE
+        contents[-1] = types.Content(role="user", parts=[types.Part.from_text(text=cued)])
     config = types.GenerateContentConfig(
         system_instruction=persona_prompt,
         temperature=0.0,
@@ -94,12 +102,14 @@ def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
         # prior reply (model history + transcript) to a heard prefix before the
         # persona replies, so the persona reacts to half a reply and the agent's
         # next turn sees it was interrupted.
+        barged = False
         if barge_prop > 0 and convo.transcript and convo.transcript[-1]["role"] == "agent":
             heard = maybe_barge_in(convo.transcript[-1]["content"], agent_turns, barge_prop)
             if heard is not None:
                 convo.truncate_last_reply(heard)
+                barged = True
         user_line = _persona_reply(client, persona_model, persona_prompt,
-                                  convo.transcript)
+                                  convo.transcript, barged=barged)
         # Honor the [DONE] stop marker (same convention as the flowstore sim):
         # strip it, deliver any remaining text, then end the conversation.
         done = bool(_DONE_RE.search(user_line))
