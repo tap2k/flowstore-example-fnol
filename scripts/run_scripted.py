@@ -221,7 +221,7 @@ def main(argv=None):
     from _compile import compile_prompt, compile_spec
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
-    import _voice
+    import _persona
 
     case_path = Path(args.case).resolve()
     case = load_json(case_path)
@@ -230,7 +230,7 @@ def main(argv=None):
     # Voice-realism defaults to the agent's declared modality; --voice/--no-voice overrides.
     _agent_path = project_dir / "agent.json"
     _modality = (load_json(_agent_path).get("meta") or {}).get("modality") if _agent_path.exists() else None
-    effective_voice = _voice.resolve_voice(args.voice, _modality)
+    effective_voice = _persona.resolve_voice(args.voice, _modality)
     if not effective_voice and any(
         isinstance(t, dict) and t.get("barge_in") for t in (case.get("user_turns") or [])
     ):
@@ -267,17 +267,17 @@ def main(argv=None):
     convo.agent_reply(None)
     prev_reply = convo.transcript[-1]["content"] if convo.transcript else ""
     for idx, (user_text, is_barge) in enumerate(
-        _voice.expand_user_turns(case.get("user_turns", []) or [])
+        _persona.expand_user_turns(case.get("user_turns", []) or [])
     ):
         if effective_voice:
-            user_text = _voice.asr_shape(
+            user_text = _persona.asr_shape(
                 user_text, language, seed=idx, level=args.voice_level
             )
         # Barge-in: the caller talks over the agent, so it only "heard" a prefix
         # of the prior reply. fnol drives the compiled prompt directly (no live
         # session), so we can rewrite history + transcript to that prefix.
         if is_barge and effective_voice and prev_reply:
-            convo.truncate_last_reply(_voice.barge_in_prefix(prev_reply, seed=idx))
+            convo.truncate_last_reply(_persona.barge_in_prefix(prev_reply, seed=idx))
         convo.agent_reply(user_text, barge_in=is_barge)
         prev_reply = convo.transcript[-1]["content"] if convo.transcript else ""
         # The agent invoked an ends_conversation capability — it hung up.
