@@ -76,9 +76,13 @@ _DONE_RE = _re.compile(r"\[done\]", _re.IGNORECASE)
 
 def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
               dispatcher, name_map, persona_prompt, max_turns, thinking=False,
-              terminal_ids=frozenset()):
-    """Run one full persona conversation; return the Conversation."""
+              terminal_ids=frozenset(), asr_level=None, barge_prop=0.0, lang="EN"):
+    """Run one full persona conversation; return the Conversation.
+
+    asr_level / barge_prop are the persona's voice-realism traits (asr,
+    barge_in), applied here the same way the flowstore sim does."""
     from _agent import Conversation
+    from _persona import asr_shape, maybe_barge_in
 
     convo = Conversation(client, agent_model, system_prompt, tool_schemas,
                         dispatcher, name_map, thinking=thinking)
@@ -86,6 +90,14 @@ def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
     convo.agent_reply(None)
     agent_turns = 1
     while agent_turns < max_turns:
+        # Barge-in (persona's barge_in trait): cut the agent off — truncate its
+        # prior reply (model history + transcript) to a heard prefix before the
+        # persona replies, so the persona reacts to half a reply and the agent's
+        # next turn sees it was interrupted.
+        if barge_prop > 0 and convo.transcript and convo.transcript[-1]["role"] == "agent":
+            heard = maybe_barge_in(convo.transcript[-1]["content"], agent_turns, barge_prop)
+            if heard is not None:
+                convo.truncate_last_reply(heard)
         user_line = _persona_reply(client, persona_model, persona_prompt,
                                   convo.transcript)
         # Honor the [DONE] stop marker (same convention as the flowstore sim):
@@ -94,6 +106,10 @@ def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
         user_line = _DONE_RE.sub("", user_line).strip()
         if not user_line:
             break
+        # ASR shaping (persona's asr trait): garble the turn like raw
+        # transcription before it reaches the agent.
+        if asr_level:
+            user_line = asr_shape(user_line, lang, seed=agent_turns, level=asr_level)
         convo.agent_reply(user_line)
         agent_turns += 1
         if done:
@@ -123,7 +139,7 @@ def main(argv=None):
                         make_dispatcher, name_to_id, resolve_fixture,
                         resolve_paths, terminal_capability_ids, vars_to_tempfile)
     from _compile import compile_prompt, compile_spec
-    from _persona import compose_persona_prompt
+    from _persona import compose_persona_prompt, asr_shape, maybe_barge_in
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
 
@@ -152,6 +168,13 @@ def main(argv=None):
     _modality = (load_json(project_dir / "agent.json").get("meta", {}).get("modality")
                  or "voice")
     persona_prompt = compose_persona_prompt(persona_prompt, _modality)
+
+    # Voice-realism knobs from the persona's traits (same source the sim reads):
+    # asr = ASR-shaping level (unintelligible caller); barge_in = interruption
+    # propensity 0–1 (impatient caller). Passed into run_trial.
+    _traits = (persona or {}).get("traits") or {}
+    asr_level = _traits.get("asr") if _traits.get("asr") in ("clean", "light", "heavy") else None
+    barge_prop = float(_traits.get("barge_in") or 0)
 
     # Effective fixture = persona ∪ case (case wins per key).
     fixture = resolve_fixture(persona, case)
@@ -212,7 +235,9 @@ def main(argv=None):
         convo = run_trial(client, agent_model, persona_model, system_prompt,
                          tool_schemas, dispatcher, name_map, persona_prompt,
                          max_turns, thinking=args.thinking,
-                         terminal_ids=terminal_capability_ids(agent_dict))
+                         terminal_ids=terminal_capability_ids(agent_dict),
+                         asr_level=asr_level, barge_prop=barge_prop,
+                         lang=(language or "EN"))
         evals = evaluate_convo(convo)
         last_convo, last_evals = convo, evals
         trials_out.append({

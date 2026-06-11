@@ -143,6 +143,21 @@ def barge_in_prefix(reply: str, *, seed: int = 0) -> str:
     return " ".join(words[:cut])
 
 
+def maybe_barge_in(reply: str, seed: int, propensity: float):
+    """Probabilistic barge-in for persona runs (the persona's barge_in trait):
+    with `propensity` (0–1) return the heard prefix (a 30–70% word-prefix + an
+    ellipsis cue), else None. Mirrors the browser maybeBargeIn — first draw
+    decides, second sets the cut (so it decorrelates from the decision)."""
+    words = (reply or "").split()
+    if len(words) <= 1 or propensity <= 0:
+        return None
+    rng = _rng(seed, reply)
+    if rng.random() >= propensity:
+        return None
+    cut = max(1, int(len(words) * rng.uniform(0.3, 0.7)))
+    return " ".join(words[:cut]) + "…"
+
+
 def expand_user_turns(user_turns) -> Iterator[tuple[str, bool]]:
     """Yield (text, is_barge_in) per entry. A turn is either a plain string or
     ``{"text": str, "barge_in"?: bool}`` — the schema widening that lets a case
