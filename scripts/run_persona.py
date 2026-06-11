@@ -147,7 +147,7 @@ def main(argv=None):
 
     from _agent import (default_model, load_persona, make_client,
                         make_dispatcher, name_to_id, resolve_fixture,
-                        resolve_paths, terminal_capability_ids, vars_to_tempfile)
+                        provided_vars, resolve_paths, terminal_capability_ids, vars_to_tempfile)
     from _compile import compile_prompt, compile_spec
     from _persona import compose_persona_prompt, asr_shape, maybe_barge_in
     from _eval import (clean_evaluator_result, eval_capability_assertions,
@@ -193,7 +193,9 @@ def main(argv=None):
     if vars_file:
         vars_file = str(Path(vars_file).resolve())
     else:
-        vars_file = vars_to_tempfile(fixture["vars"])
+        # Ship only the session-start payload (provided-declared keys); the rest
+        # of the character sheet must be earned through conversation or mocks.
+        vars_file = vars_to_tempfile(provided_vars(project_dir, fixture["vars"]))
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
         project_dir, language=language, vars_file=vars_file,

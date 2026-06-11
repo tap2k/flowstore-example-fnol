@@ -124,6 +124,11 @@
     "leave_note": {
       "type": "boolean",
       "description": "On cancel/no-file: whether to leave a note on the policy that the caller reached out."
+    },
+    "now": {
+      "type": "string",
+      "provided": true,
+      "description": "Today's calendar date; session clock anchor for date references in incident details."
     }
   }
 }

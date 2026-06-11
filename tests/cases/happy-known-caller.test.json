@@ -1,11 +1,11 @@
 {
   "$schema": "flowstore://test/case/v0",
   "id": "happy-known-caller",
-  "name": "Pre-identified caller (persona vars seed name + policy)",
-  "notes": "Demonstrates pre-context: the bound known-caller persona's vars (caller_name, policy_number, now) are seeded into the compiled prompt, as if the caller was authenticated in the Northwind app before transfer. (Most fnol context is captured live; this shows the pre-context mechanism \u2014 it matters more for outbound agents. now is also seeded for stable date references.)",
+  "name": "Character-sheet vars ground the mocks (caller states identity live)",
+  "notes": "Demonstrates the character sheet: vars (caller_name, policy_number) are edit-time ground truth that keeps the mocks consistent with the caller's identity (cap_verify_policy returns named_drivers naming the same person) — they do NOT reach the agent. Only `now` is declared provided in variables.json (the session clock), so the agent must elicit name and policy in conversation, which the turns do. For agents whose deployment genuinely knows the caller at session start (outbound dialers, screen-pop transfers), mark those variables `provided: true` on the declaration instead — see SCHEMA.md § Variables → provided.",
   "user_turns": [
     "Yeah, everyone's okay, I'm safe.",
-    "It's still seven seven four two one zero nine.",
+    "Jordan Reese, policy seven seven four two one zero nine.",
     "Backed into a pole in a parking lot this morning, just me, no police.",
     "Rear bumper, but it drives fine.",
     "No other car involved.",
@@ -28,7 +28,7 @@
   "language": "en-US",
   "tags": [
     "happy",
-    "pre-context",
+    "character-sheet",
     "single-vehicle"
   ],
   "vars": {

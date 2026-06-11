@@ -80,14 +80,16 @@ def main(argv=None):
     project_dir = resolve_paths(dec_path)
 
     language = args.language or dec.get("language")
-    # Decision tests carry their fixture (vars + mocks) inline — they have no
-    # actor (the branches script their own inputs), so there's no persona.
+    # Decision tests carry `state` + `mocks` inline — they have no actor (the
+    # branches script their own inputs), so there's no persona. `state` is a
+    # mid-conversation snapshot ("the conversation already established these
+    # values"), injected wholesale — no `provided` filtering (see provided_vars).
     fixture = resolve_fixture(None, dec)
     vars_file = args.vars_file
     if vars_file:
         vars_file = str(Path(vars_file).resolve())
     else:
-        vars_file = vars_to_tempfile(fixture["vars"])
+        vars_file = vars_to_tempfile(dec.get("state") or {})
 
     system_prompt, tool_schemas, agent_dict = compile_prompt(
         project_dir, language=language, vars_file=vars_file,

@@ -99,6 +99,28 @@ def resolve_fixture(persona, case):
     return {"vars": vars_, "mocks": mocks}
 
 
+def provided_vars(project_dir, vars_dict):
+    """The subset of a fixture's vars the deployment would hand the session at
+    start — the only vars that get baked into a compiled prompt or sent as
+    context_vars for persona/scripted runs.
+
+    Filtered by `provided: true` on variables.json declarations (the
+    session-start payload contract). Everything else in the character sheet is
+    edit-time ground truth the agent must earn through conversation or mocks;
+    for this inbound agent that is everything caller-stated or
+    capability-bound — only the session clock (`now`) ships. Decision tests
+    bypass this — their `state` is a mid-conversation snapshot, injected
+    wholesale by design.
+    """
+    if not vars_dict:
+        return {}
+    declared = json.loads(
+        (Path(project_dir) / "variables.json").read_text(encoding="utf-8")
+    ).get("variables") or {}
+    return {k: v for k, v in vars_dict.items()
+            if (declared.get(k) or {}).get("provided")}
+
+
 def vars_to_tempfile(vars_dict):
     """Write a vars dict to a temp JSON file and return its path.
 
