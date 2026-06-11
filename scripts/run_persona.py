@@ -123,6 +123,7 @@ def main(argv=None):
                         make_dispatcher, name_to_id, resolve_fixture,
                         resolve_paths, terminal_capability_ids, vars_to_tempfile)
     from _compile import compile_prompt, compile_spec
+    from _persona import compose_persona_prompt
     from _eval import (clean_evaluator_result, eval_capability_assertions,
                        load_json, run_named_evaluator)
 
@@ -144,6 +145,14 @@ def main(argv=None):
     else:
         parser.error("case has no persona_id or inline system_prompt; "
                      "use run_scripted.py for scripted cases")
+
+    # Compose the runnable user-sim prompt the same way the flowstore sim does:
+    # identity+scenario · traits · medium rail, so this batch harness and the
+    # interactive sim produce identical persona prompts. See scripts/_persona.py.
+    _modality = (load_json(project_dir / "agent.json").get("meta", {}).get("modality")
+                 or "voice")
+    _persona_traits = persona.get("traits") if persona else None
+    persona_prompt = compose_persona_prompt(persona_prompt, _modality, _persona_traits)
 
     # Effective fixture = persona ∪ case (case wins per key).
     fixture = resolve_fixture(persona, case)
