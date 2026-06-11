@@ -145,17 +145,14 @@ def barge_in_prefix(reply: str, *, seed: int = 0) -> str:
 
 def maybe_barge_in(reply: str, seed: int, propensity: float):
     """Probabilistic barge-in for persona runs (the persona's barge_in trait):
-    with `propensity` (0–1) return the heard prefix (a 30–70% word-prefix + an
-    ellipsis cue), else None. Mirrors the browser maybeBargeIn — first draw
-    decides, second sets the cut (so it decorrelates from the decision)."""
-    words = (reply or "").split()
-    if len(words) <= 1 or propensity <= 0:
+    with `propensity` (0–1) return the heard prefix (via barge_in_prefix), else
+    None. Seeded; the cut itself reuses barge_in_prefix so there's one trim. No
+    ellipsis — a 'was interrupted' cue belongs on turn metadata, not the text."""
+    if propensity <= 0 or len((reply or "").split()) <= 1:
         return None
-    rng = _rng(seed, reply)
-    if rng.random() >= propensity:
+    if _rng(seed, reply).random() >= propensity:
         return None
-    cut = max(1, int(len(words) * rng.uniform(0.3, 0.7)))
-    return " ".join(words[:cut]) + "…"
+    return barge_in_prefix(reply, seed=seed)
 
 
 def expand_user_turns(user_turns) -> Iterator[tuple[str, bool]]:
