@@ -93,7 +93,8 @@ paste into any LLM runtime, which is also what the simulator runs against.
 
 ## Build a spec from existing material
 
-`prompts/AGENT-SPEC-PROMPT.txt` is the LLM prompt that converts raw source material — an
+[AGENT-SPEC-PROMPT.txt](https://github.com/tap2k/flowstore/blob/main/AGENT-SPEC-PROMPT.txt)
+(maintained in the flowstore repo) is the LLM prompt that converts raw source material — an
 existing system prompt, a process doc, a script spreadsheet, a Figma flow export, call
 transcripts, PDFs — into a flowstore v0 spec (one canonical JSON object). Use it when
 you're starting from existing artifacts rather than authoring on the canvas from scratch.
@@ -103,15 +104,15 @@ Two ways to run it — either works:
 **In the editor.** Open the Assistant (sparkles button) at
 [create.flowstore.org](https://create.flowstore.org), click **Attach** to drop your source
 files (text formats: `.txt`, `.md`, `.json`, `.yaml`, `.csv` — copy the text out of PDF /
-Word first), then click **Build from source**. The Assistant runs `AGENT-SPEC-PROMPT.txt`
+Word first), then click **Build from source**. The Assistant runs that prompt
 against your configured LLM, validates the result against the v0 schema, and loads it onto
 the canvas, replacing the current spec after a confirm. Needs an LLM key in **Settings**.
 
 **External round-trip.** No LLM key configured in the editor, or want to use a model the
 editor doesn't speak to:
 
-1. Open `prompts/AGENT-SPEC-PROMPT.txt`. It instructs an LLM to read your material and
-   emit a v0 spec as a single JSON object.
+1. Open [AGENT-SPEC-PROMPT.txt](https://github.com/tap2k/flowstore/blob/main/AGENT-SPEC-PROMPT.txt).
+   It instructs an LLM to read your material and emit a v0 spec as a single JSON object.
 2. Paste that prompt plus your source material into any LLM (Claude, GPT, Gemini). Copy
    the JSON it returns.
 3. In the editor, click the **Import** icon, paste the JSON, and **Parse & import**. The

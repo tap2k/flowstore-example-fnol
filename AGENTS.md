@@ -41,7 +41,7 @@ fnol/
 ├── flows/                         16 flows — all five types (<id>.flow.json + <id>.scripts.csv)
 ├── comments/                      anchored review threads
 ├── models/defaults.json           default + judge/user-sim roles
-├── prompts/                       AGENT-SPEC-PROMPT.txt, GOLD-EXTRACTION-PROMPT.txt
+├── prompts/                       GOLD-EXTRACTION-PROMPT.txt
 ├── tests/                         cases (11), decisions (2), gold (3), personas (3),
 │                                  rubrics (5), evaluators (6), runs
 └── scripts/                       Python test harness (Gemini)
@@ -58,7 +58,7 @@ Two equivalent ways to edit — both operate on the same spec:
 - **The hosted editor** at [create.flowstore.org](https://create.flowstore.org) (no install). Open this project (GitHub-open round-trips Save back to the repo; or Import the folder for a read-only look). Flows are nodes on a canvas; the toolbar sheets edit the envelope. The **Assistant** (sparkles) edits through schema-aware tools and re-validates after each change. Loading/browsing needs no key; the Assistant, Run, and Save do.
 - **Editing the files directly** in this repo. The loader reads only the canonical flowstore files and ignores `scripts/`, `tests/`, `docs/`, `.venv/`, `.git/`. Anything you write is validated against the schema on load (Ajv + graph rules), so a malformed change is rejected with errors rather than silently accepted.
 
-`prompts/AGENT-SPEC-PROMPT.txt` converts raw source material (`fnol.txt` is this agent's original design narrative) into a v0 spec — run it in the Assistant ("Build from source") or paste it into any LLM and import the JSON it returns.
+[AGENT-SPEC-PROMPT.txt](https://github.com/tap2k/flowstore/blob/main/AGENT-SPEC-PROMPT.txt) (maintained in the flowstore repo) converts raw source material (`fnol.txt` is this agent's original design narrative) into a v0 spec — run it in the Assistant ("Build from source") or paste it into any LLM and import the JSON it returns.
 
 When you change a flow's `instructions`, scripts, guardrails, or a routing `condition`, **re-test** (below) — a system prompt has no compiler to catch a regression, so the tests are the safety net.
 
