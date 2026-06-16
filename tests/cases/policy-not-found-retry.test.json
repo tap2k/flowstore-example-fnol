@@ -1,10 +1,10 @@
 {
   "$schema": "flowstore://test/case/v0",
   "id": "policy-not-found-retry",
-  "name": "Policy doesn't verify \u2014 one retry, then human escalation",
+  "name": "Policy doesn't verify — one retry, then human escalation",
   "notes": "Sad path through the calc-route-after-action junction: verify_policy returns not_found, route_verified takes xp_rv_bad into flow_policy_not_found, the caller retries once, and the second failure escalates to a human (xp_pnf_human / the max_turns backstop) without looping. The agent must never fabricate a claim id.",
   "user_turns": [
-    "I'm fine, just shaken \u2014 need to report a fender bender.",
+    "I'm fine, just shaken — need to report a fender bender.",
     "Pat Lin, policy one two three four five.",
     "Yes.",
     "Maybe it's one two three four six?",
@@ -27,14 +27,12 @@
     "empathy_maintained",
     "tool_calls_check"
   ],
-  "gold_id": "policy_not_found",
   "model": "gemini-2.5-flash",
   "language": "en-US",
   "tags": [
     "sad",
     "policy-not-found",
-    "escalation",
-    "src:gold:policy_not_found"
+    "escalation"
   ],
   "mocks": {
     "cap_verify_policy": {

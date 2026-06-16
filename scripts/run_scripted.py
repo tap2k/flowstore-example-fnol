@@ -320,11 +320,6 @@ def main(argv=None):
     # (e) named evaluators (rubric -> LLM judge; else python evaluator)
     judge_model = default_model(project_dir, role="judge")
     gold = None
-    gold_id = case.get("gold_id")
-    if gold_id:
-        gold_path = project_dir / "tests" / "gold" / f"{gold_id}.gold.json"
-        if gold_path.is_file():
-            gold = load_json(gold_path)
     for name in case.get("evaluators", []) or []:
         result["evaluator_results"].append(run_named_evaluator(
             name, project_dir=project_dir, result=result,

@@ -81,13 +81,11 @@
     "no_premium_speculation",
     "claim_filed_correctly"
   ],
-  "gold_id": "happy_claim_filed",
   "model": "gemini-2.5-flash",
   "language": "en-US",
   "tags": [
     "happy",
-    "claim-filed",
-    "src:gold:happy_claim_filed"
+    "claim-filed"
   ],
   "mocks": {
     "cap_verify_policy": {

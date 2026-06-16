@@ -213,11 +213,6 @@ def main(argv=None):
     client = make_client()
 
     gold = None
-    gold_id = case.get("gold_id")
-    if gold_id:
-        gold_path = project_dir / "tests" / "gold" / f"{gold_id}.gold.json"
-        if gold_path.is_file():
-            gold = load_json(gold_path)
 
     prompt_source = args.system_prompt if args.system_prompt else "flowstore-compile"
 
