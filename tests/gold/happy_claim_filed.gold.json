@@ -5,6 +5,7 @@
   "notes": "Caller is safe and unhurt, verifies an active policy, reports a rear-end collision with another party, confirms the recap, the claim is filed, and a callback is scheduled.",
   "source_pointer": "Authored reference for the fnol happy path; mirrors flow_safety_triage → flow_identify → flow_incident_details → flow_vehicle_info → flow_other_party_info → flow_photos → flow_review_and_file → flow_schedule_adjuster.",
   "tags": [
+    "lang:en",
     "happy-path"
   ],
   "vars": {

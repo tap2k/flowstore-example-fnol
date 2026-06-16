@@ -5,6 +5,7 @@
   "notes": "Caller reports a serious injury at the scene. The agent stops intake, urges 911, makes clear the claim can wait, and offers a one-hour human callback.",
   "source_pointer": "Authored reference for the emergency-defer path; mirrors flow_safety_triage → flow_defer_emergency (xp_de_callback fires cap_schedule_adjuster, callback_window=1_hour).",
   "tags": [
+    "lang:en",
     "emergency",
     "escalation"
   ],

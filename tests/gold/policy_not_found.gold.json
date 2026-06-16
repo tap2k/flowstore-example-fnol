@@ -5,6 +5,7 @@
   "notes": "Caller is safe, but the policy number doesn't verify. The agent re-reads it, lets the caller retry once, and when it still fails escalates to a human without looping.",
   "source_pointer": "Authored reference for the policy-not-found path; mirrors flow_identify → flow_route_verified (xp_rv_bad) → flow_policy_not_found (retry once via xp_pnf_retry, then xp_pnf_human).",
   "tags": [
+    "lang:en",
     "escalation",
     "policy-error"
   ],
