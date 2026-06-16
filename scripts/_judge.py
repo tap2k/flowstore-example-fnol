@@ -1,157 +1,110 @@
-"""LLM-as-judge: score a transcript against a rubric.
+"""
+Shared judge plumbing: LLM-as-judge rubric evaluation against a transcript.
 
-A rubric (flowstore://test/rubric/v0) carries free-text criteria, a numeric
-scale, and a prompt_template with {criteria} / {transcript} / {scale.min} /
-{scale.max} / {gold_standard} placeholders. We render the template, ask the
-judge model for a JSON {score, notes}, and return a normalised evaluator result.
+Used by run_scripted.py (gold-comparison rubrics on scripted cases) and run_persona.py
+(persona-driven cases where rubrics are the primary signal). Both produce
+the same flowstore://run/result/v0 evaluator_results[] shape: {name, score, notes}.
 
-Provider note: like _agent, the only Gemini-specific lines live here; swap the
-_call_judge body to retarget another LLM. The judge model defaults to
-models/defaults.json roles.judge (then "gemini-2.5-flash").
+Public API:
+  format_transcript(transcript) -> str
+  judge_one(rubric, transcript, client, default_model, gold_text=None) -> dict
+  load_rubric(project, name) -> dict
+  load_gold(project, gold_id) -> dict | None
+
+The judge calls Gemini in structured-output mode (response_schema=RubricVerdict)
+so we never parse JSON manually. Scores are clamped to the rubric's scale.
 """
 
 from __future__ import annotations
 
 import json
-import re
+from pathlib import Path
+from typing import Any
+
+from google.genai import types
+from pydantic import BaseModel, Field
 
 
-def _format_transcript(transcript):
-    """Render a transcript ([{role, content}]) as readable AGENT/USER lines."""
-    lines = []
-    for turn in transcript or []:
-        role = turn.get("role", "?").upper()
-        lines.append(f"{role}: {turn.get('content', '')}")
-    return "\n".join(lines)
+class RubricVerdict(BaseModel):
+    score: int = Field(..., description="Integer in the rubric's [min, max] range.")
+    notes: str = Field(..., description="One-sentence justification citing turn numbers.")
 
 
-def _format_gold(gold):
-    """Render a gold-standard transcript (turns: [{role, text}]) for the prompt."""
-    if not gold:
-        return "(no gold-standard reference provided)"
-    lines = []
-    for turn in gold.get("turns", []):
-        role = turn.get("role", "?").upper()
-        lines.append(f"{role}: {turn.get('text', '')}")
-    return "\n".join(lines)
+_MIN_TURNS_FOR_JUDGING = 5  # below this, conversation likely never reached substantive content
 
 
-def _render_template(template, rubric, transcript_text, gold_text):
-    """Fill the rubric placeholders.
-
-    Supports {criteria}, {transcript}, {gold_standard}, {scale.min}, {scale.max}.
-    Done with explicit replacement (not str.format) because the templates contain
-    literal JSON braces like {"score": ...} that str.format would choke on.
-    """
-    scale = rubric.get("scale", {}) or {}
-    repl = {
-        "{criteria}": str(rubric.get("criteria", "")),
-        "{transcript}": transcript_text,
-        "{gold_standard}": gold_text,
-        "{scale.min}": str(scale.get("min", 1)),
-        "{scale.max}": str(scale.get("max", 5)),
-    }
-    out = template
-    for key, val in repl.items():
-        out = out.replace(key, val)
-    return out
+def load_rubric(project: Path, name: str) -> dict[str, Any]:
+    """Resolve `name` -> tests/rubrics/<name>.rubric.json. Raises if missing."""
+    rpath = project / "tests" / "rubrics" / f"{name}.rubric.json"
+    if not rpath.exists():
+        raise FileNotFoundError(f"rubric not found: {rpath}")
+    return json.loads(rpath.read_text())
 
 
-def _extract_json(text):
-    """Best-effort extraction of the first {...} JSON object from model text."""
-    if not text:
+def load_gold(project: Path, gold_id: str) -> dict[str, Any] | None:
+    """Resolve `gold_id` -> tests/gold/<gold_id>.gold.json. Returns None if missing."""
+    gpath = project / "tests" / "gold" / f"{gold_id}.gold.json"
+    if not gpath.exists():
         return None
-    # Strip a ```json fence if present.
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if fenced:
-        try:
-            return json.loads(fenced.group(1))
-        except json.JSONDecodeError:
-            pass
-    # Otherwise find the first balanced object.
-    start = text.find("{")
-    while start != -1:
-        depth = 0
-        for i in range(start, len(text)):
-            if text[i] == "{":
-                depth += 1
-            elif text[i] == "}":
-                depth -= 1
-                if depth == 0:
-                    chunk = text[start:i + 1]
-                    try:
-                        return json.loads(chunk)
-                    except json.JSONDecodeError:
-                        break
-        start = text.find("{", start + 1)
-    return None
+    return json.loads(gpath.read_text())
 
 
-def _call_judge(client, model, prompt):
-    """Ask the judge model for a JSON verdict; return raw text.
+def format_transcript(transcript: list[dict[str, Any]]) -> str:
+    """Numbered, role-tagged plain text. Turn numbers are 1-indexed across all
+    turns so judge's 'turn N' citations align with what a human reader sees."""
+    lines = []
+    for i, t in enumerate(transcript, start=1):
+        who = "AGENT" if t["role"] == "agent" else "CUSTOMER"
+        lines.append(f"[turn {i}] {who}: {t['content']}")
+    return "\n".join(lines)
 
-    Uses Gemini JSON mode so the response is a single object when supported,
-    and falls back to plain extraction otherwise.
-    """
-    from google.genai import types
 
-    config = types.GenerateContentConfig(
-        temperature=0.0,
-        response_mime_type="application/json",
+def format_gold(gold: dict[str, Any]) -> str:
+    """Render a gold's turns[] the same way as a result transcript."""
+    lines = []
+    for i, t in enumerate(gold.get("turns", []), start=1):
+        who = "AGENT" if t.get("role") == "agent" else "CUSTOMER"
+        lines.append(f"[turn {i}] {who}: {t.get('text', '')}")
+    return "\n".join(lines)
+
+
+def judge_one(
+    rubric: dict[str, Any],
+    transcript: list[dict[str, Any]],
+    client: Any,
+    default_model: str,
+    gold_text: str | None = None,
+) -> dict[str, Any]:
+    """Run one rubric against one transcript. Returns
+    {name, score, notes}. Score is None on truncation or judge error."""
+    if len(transcript) < _MIN_TURNS_FOR_JUDGING:
+        return {
+            "name": rubric["id"],
+            "score": None,
+            "notes": f"skipped — transcript truncated at {len(transcript)} turns (min {_MIN_TURNS_FOR_JUDGING})",
+        }
+    scale = rubric.get("scale", {"min": 1, "max": 5})
+    template: str = rubric["prompt_template"]
+    judge_prompt = (
+        template
+        .replace("{criteria}", rubric["criteria"])
+        .replace("{transcript}", format_transcript(transcript))
+        .replace("{gold_standard}", gold_text or "(no gold provided)")
+        .replace("{scale.min}", str(scale["min"]))
+        .replace("{scale.max}", str(scale["max"]))
     )
-    resp = client.models.generate_content(
-        model=model,
-        contents=prompt,
-        config=config,
-    )
-    return (resp.text or "").strip()
-
-
-def judge(client, rubric, transcript, default_model, gold=None):
-    """Score one rubric over a transcript.
-
-    - client: Gemini client (from _agent.make_client()).
-    - rubric: rubric dict (must have id, criteria, scale, prompt_template).
-    - transcript: [{role, content}] dialogue.
-    - default_model: model id to use when the rubric doesn't pin one.
-    - gold: optional gold dict (turns: [{role, text}]) for {gold_standard}.
-
-    Returns {name, score, passed, notes}. passed = score >= scale midpoint.
-    """
-    model = rubric.get("model") or default_model
-    scale = rubric.get("scale", {}) or {}
-    smin = scale.get("min", 1)
-    smax = scale.get("max", 5)
-    midpoint = (smin + smax) / 2.0
-
-    prompt = _render_template(
-        rubric.get("prompt_template", ""),
-        rubric,
-        _format_transcript(transcript),
-        _format_gold(gold),
-    )
-
-    name = rubric.get("id", "rubric")
     try:
-        raw = _call_judge(client, model, prompt)
-    except Exception as exc:  # noqa: BLE001 - surface judge failures as a result
-        return {"name": name, "score": None, "passed": None,
-                "notes": f"judge call failed: {exc}"}
-
-    parsed = _extract_json(raw)
-    if not parsed or "score" not in parsed:
-        return {"name": name, "score": None, "passed": None,
-                "notes": f"could not parse judge JSON from: {raw[:200]!r}"}
-
-    try:
-        score = float(parsed["score"])
-    except (TypeError, ValueError):
-        return {"name": name, "score": None, "passed": None,
-                "notes": f"non-numeric score: {parsed.get('score')!r}"}
-
-    return {
-        "name": name,
-        "score": score,
-        "passed": score >= midpoint,
-        "notes": str(parsed.get("notes", "")),
-    }
+        resp = client.models.generate_content(
+            model=rubric.get("model") or default_model,
+            contents=[types.Content(role="user", parts=[types.Part.from_text(text=judge_prompt)])],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=RubricVerdict,
+                temperature=0.0,
+            ),
+        )
+        verdict = RubricVerdict.model_validate_json(resp.text)
+        score = max(scale["min"], min(scale["max"], verdict.score))
+        return {"name": rubric["id"], "score": score, "notes": verdict.notes}
+    except Exception as e:  # noqa: BLE001
+        return {"name": rubric["id"], "score": None, "notes": f"judge error: {type(e).__name__}: {e}"}

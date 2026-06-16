@@ -29,7 +29,7 @@ def _compile_cmd() -> list[str]:
     """Return the base argv for invoking the compiler.
 
     Callers append the project dir and any flags (``--format prompt``,
-    ``--language es-US``, ``--vars-file …``). Exits if FLOWSTORE_COMPILE_CMD
+    ``--language ES``, ``--vars-file …``). Exits if FLOWSTORE_COMPILE_CMD
     isn't set.
     """
     override = os.environ.get("FLOWSTORE_COMPILE_CMD")
@@ -66,7 +66,7 @@ def compile_prompt(project_dir, language=None, vars_file=None,
     """Compile a flowstore project to (system_prompt, tool_schemas, agent_dict).
 
     - project_dir: path (str or Path) to the project root (the dir with agent.json).
-    - language: optional language code (e.g. "es-US"); falls back to the project default.
+    - language: optional language code (e.g. "ES"); falls back to the project default.
     - vars_file: optional path to a variables override file.
     - system_prompt_override: optional path to a file whose contents replace the
       compiled system prompt (tool schemas still come from the compiler).
