@@ -90,16 +90,17 @@ def provided_vars(project: Path, vars_dict: dict[str, Any] | None) -> dict[str, 
     start — the only vars that get baked into a compiled prompt or sent as
     context_vars for persona/scripted runs.
 
-    Filtered by `provided: true` on agent.json variables (the dialer-payload
-    contract). Everything else in the character sheet is edit-time ground
-    truth the agent must earn through conversation or mocks; for this outbound
-    agent that is just identity_confirmed (set by an in-conversation assign).
-    Decision tests bypass this — their `state` is a mid-conversation snapshot,
-    injected wholesale by design.
+    Filtered by `provided: true` in the variable declarations
+    (variables.json — the dialer-payload contract). Everything else in the
+    character sheet is edit-time ground truth the agent must earn through
+    conversation or mocks; for this outbound agent that is just
+    identity_confirmed (set by an in-conversation assign). Decision tests
+    bypass this — their `state` is a mid-conversation snapshot, injected
+    wholesale by design.
     """
     if not vars_dict:
         return {}
-    declared = json.loads((Path(project) / "agent.json").read_text(encoding="utf-8")) \
+    declared = json.loads((Path(project) / "variables.json").read_text(encoding="utf-8")) \
         .get("variables") or {}
     return {k: v for k, v in vars_dict.items()
             if (declared.get(k) or {}).get("provided")}
