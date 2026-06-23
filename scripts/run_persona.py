@@ -166,6 +166,12 @@ def main(argv=None):
         if not persona:
             parser.error(f"persona {persona_id} not found in tests/personas/")
         persona_prompt = persona.get("system_prompt", "")
+        # Per-scenario overlay: a case may carry an inline system_prompt
+        # alongside persona_id; append it to vary behavior without forking a
+        # persona. Mirrors flowstore resolveActorPrompt (compose adds the rail).
+        overlay = (case.get("system_prompt") or "").strip()
+        if overlay:
+            persona_prompt = persona_prompt.rstrip() + "\n\n" + overlay
     elif case.get("system_prompt"):
         persona_prompt = case["system_prompt"]
     else:
