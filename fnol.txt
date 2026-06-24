@@ -137,8 +137,8 @@ REVIEW_AND_FILE (happy):
     fire 'log_no_file', END.
 
 SCHEDULE_ADJUSTER (happy):
-- "You're all filed — claim {claim_id}. An adjuster will reach out in about
-  {estimated_callback_window}. What number's best to reach you?"
+- "You're all filed — claim {{claim_id}}. An adjuster will reach out in about
+  {{estimated_callback_window}}. What number's best to reach you?"
 - Capture:
   - 'callback_number' (string) via LLM. Read it back digit-by-digit before confirming.
   - 'callback_window' (enum: asap | morning | afternoon | next_day) via LLM.
@@ -201,7 +201,7 @@ Capabilities (declared at agent level, fired from exit_paths):
                photos_promised]
     outputs = [claim_id, estimated_callback_window]
     File the claim record. Outputs bind into scope; SCHEDULE_ADJUSTER scripts
-    template '{claim_id}' and '{estimated_callback_window}'.
+    template '{{claim_id}}' and '{{estimated_callback_window}}'.
 - 'schedule_adjuster' (kind: function):
     inputs  = [claim_id, callback_number, callback_window]
     outputs = []

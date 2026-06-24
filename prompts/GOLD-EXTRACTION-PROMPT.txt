@@ -43,7 +43,7 @@ V0 SCHEMA
       "turns": [
         {
           "role": "agent" | "user",
-          "text": "Verbatim utterance from the source. Preserve {placeholders}, punctuation, capitalization, accents.",
+          "text": "Verbatim utterance from the source. Preserve {{placeholders}}, punctuation, capitalization, accents.",
           "properties": [
             // Optional. One short tag per acceptance criterion this turn embodies.
             // Use these tags ONLY when the source itself tells you what made
@@ -103,8 +103,8 @@ Turn roles: exactly "agent" or "user". The source may use synonyms
 ("Bot:", "Assistant:", "AI:", "IVR:" → agent; "Caller:", "Customer:",
 "Borrower:", "Cliente:" → user). Normalize.
 
-Preserve {placeholders} like {CUSTOMER_NAME}, {ASSISTANT_NAME},
-{TOTAL_DUE_AMOUNT} verbatim in turn text. Do not substitute values.
+Preserve {{placeholders}} like {{CUSTOMER_NAME}}, {{ASSISTANT_NAME}},
+{{TOTAL_DUE_AMOUNT}} verbatim in turn text. Do not substitute values.
 Do not normalize them to snake_case — the format used in the gold
 should match what the source authors wrote.
 
@@ -160,7 +160,7 @@ trajectory feel complete or fill an obvious gap in coverage:
 - Acceptance criteria (`properties`) the source doesn't annotate
 - Scenarios you think the agent SHOULD be tested against but that the
   source doesn't demonstrate
-- Variable values — keep {PLACEHOLDERS} placeholders, never bind them
+- Variable values — keep {{PLACEHOLDERS}} placeholders, never bind them
   to concrete strings in this output
 
 Common failure modes to avoid:
