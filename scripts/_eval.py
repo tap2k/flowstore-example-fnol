@@ -78,7 +78,7 @@ def run_named_evaluator(name, *, project_dir, result, compiled_spec,
 
     - judge_client / judge_model: needed only for rubric (LLM-judge) evaluators;
       may be None when no rubric is expected (callers that only run python evals).
-    - gold: optional gold dict, passed to the judge for {gold_standard}.
+    - gold: optional gold dict, passed to the judge for {{gold_standard}}.
     """
     project_dir = Path(project_dir)
     tests = _tests_dir(project_dir)

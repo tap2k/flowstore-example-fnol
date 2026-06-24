@@ -1,3 +1,3 @@
 id,en-US,es-US
 id_s1,"Can I get your name and policy number? Take your time.","¿Me puede dar su nombre y número de póliza? Tómese su tiempo."
-id_s2,"Let me read that policy number back to make sure I got it: {policy_number}. Sound right?","Permítame repetirle el número de póliza para confirmar que lo anoté bien: {policy_number}. ¿Es correcto?"
+id_s2,"Let me read that policy number back to make sure I got it: {{policy_number}}. Sound right?","Permítame repetirle el número de póliza para confirmar que lo anoté bien: {{policy_number}}. ¿Es correcto?"

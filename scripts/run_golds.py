@@ -146,10 +146,10 @@ OUTCOME_MATCHES_GOLD_RUBRIC: dict[str, Any] = {
         "claims agent. The 'gold' is the reference; the 'agent transcript' is what the agent actually "
         "produced. They will use different wording — that's expected. "
         "Focus on substantive outcome, not phrasing.\n\n"
-        "Criterion: {criteria}\n\n"
-        "Gold transcript:\n{gold_standard}\n\n"
-        "Agent transcript:\n{transcript}\n\n"
-        "Return a JSON object with `score` (integer {scale.min}-{scale.max}) and `notes` "
+        "Criterion: {{criteria}}\n\n"
+        "Gold transcript:\n{{gold_standard}}\n\n"
+        "Agent transcript:\n{{transcript}}\n\n"
+        "Return a JSON object with `score` (integer {{scale.min}}-{{scale.max}}) and `notes` "
         "(one-sentence explanation citing what specifically diverged or matched)."
     ),
     "model": None,

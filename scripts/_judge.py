@@ -87,11 +87,11 @@ def judge_one(
     template: str = rubric["prompt_template"]
     judge_prompt = (
         template
-        .replace("{criteria}", rubric["criteria"])
-        .replace("{transcript}", format_transcript(transcript))
-        .replace("{gold_standard}", gold_text or "(no gold provided)")
-        .replace("{scale.min}", str(scale["min"]))
-        .replace("{scale.max}", str(scale["max"]))
+        .replace("{{criteria}}", rubric["criteria"])
+        .replace("{{transcript}}", format_transcript(transcript))
+        .replace("{{gold_standard}}", gold_text or "(no gold provided)")
+        .replace("{{scale.min}}", str(scale["min"]))
+        .replace("{{scale.max}}", str(scale["max"]))
     )
     try:
         resp = client.models.generate_content(
