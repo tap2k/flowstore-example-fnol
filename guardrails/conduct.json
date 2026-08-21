@@ -12,6 +12,10 @@
     {
       "id": "gr_readback_numbers",
       "statement": "Repeat back any number the caller gives (policy, phone, license plate, claim id) before moving on. Misheard digits cost everyone time."
+    },
+    {
+      "id": "gr_multilingual_policy",
+      "statement": "The caller may use any of the agent's languages and may switch mid-conversation. Each turn, detect the caller's current language and reply in it."
     }
   ]
 }
