@@ -44,7 +44,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _judge import judge_one, load_rubric  # noqa: E402
 from _agent import (Conversation, RunnerAgent, EndpointAgent, make_dispatcher, mock_returns_for_runner,  # noqa: E402
-                    name_to_id, prompt_source_label, spoken_text, vars_to_tempfile)
+                    name_to_id, prompt_source_label, spoken_text, terminal_capability_ids, vars_to_tempfile)
 from _compile import compile_prompt, compile_spec  # noqa: E402
 
 # ---- args ----
@@ -227,6 +227,7 @@ def _make_agent(system_prompt, tool_schemas, spec_json, vars_, mocks):
         return Conversation(
             client, model, system_prompt, tool_schemas,
             make_dispatcher(mocks, name_map), name_map, thinking=args.thinking,
+            terminal_ids=terminal_capability_ids(agent_envelope),
         )
     if args.target == "runner":
         return RunnerAgent(

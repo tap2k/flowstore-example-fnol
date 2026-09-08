@@ -93,7 +93,8 @@ def run_trial(client, agent_model, persona_model, system_prompt, tool_schemas,
     from _persona import asr_shape, maybe_barge_in
 
     convo = Conversation(client, agent_model, system_prompt, tool_schemas,
-                        dispatcher, name_map, thinking=thinking)
+                        dispatcher, name_map, thinking=thinking,
+                        terminal_ids=terminal_ids)
     # Agent opens.
     convo.agent_reply(None)
     agent_turns = 1

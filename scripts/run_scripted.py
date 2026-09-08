@@ -263,7 +263,8 @@ def main(argv=None):
 
     client = make_client()
     convo = Conversation(client, model, system_prompt, tool_schemas,
-                        dispatcher, name_map, thinking=args.thinking)
+                        dispatcher, name_map, thinking=args.thinking,
+                        terminal_ids=terminal_ids)
 
     # Agent opens (chatbot_initiates), then alternate with each user turn.
     convo.agent_reply(None)

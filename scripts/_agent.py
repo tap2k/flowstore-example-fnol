@@ -588,12 +588,13 @@ class Conversation:
     """
 
     def __init__(self, client, model, system_prompt, tool_schemas, dispatcher,
-                 name_map, thinking=False):
+                 name_map, thinking=False, terminal_ids=frozenset()):
         self._client = client
         self._model = model
         self._system_prompt = system_prompt
         self._dispatcher = dispatcher
         self._name_map = name_map
+        self._terminal_ids = set(terminal_ids)
 
         self.transcript: list[dict] = []
         self.capability_calls: list[dict] = []
@@ -717,12 +718,26 @@ class Conversation:
             # Loop exhausted without a plain-text reply.
             final_text = final_text or "(agent exceeded tool-call budget)"
 
-        # A tool-only turn (e.g. the agent hung up via an ends_conversation
-        # capability and said nothing after) leaves no spoken text; don't record
-        # an empty agent turn — the capability_calls entry is the record.
+        # Gemini sometimes answers a function response with no text at all.
+        # Silence is right after a terminal capability (the agent hung up);
+        # otherwise nudge once so the caller actually hears the reply — a
+        # voice runtime would do the same rather than leave dead air.
+        if not final_text and not self._hung_up():
+            self.contents.append(types.Content(role="user", parts=[types.Part.from_text(
+                text="(The caller is waiting. Say your reply now.)")]))
+            resp = self._generate_with_retry()
+            candidate = resp.candidates[0] if resp.candidates else None
+            if candidate and candidate.content:
+                self.contents.append(candidate.content)
+                final_text = "".join(
+                    p.text for p in (candidate.content.parts or []) if getattr(p, "text", None)
+                ).strip()
         if final_text:
             self.transcript.append({"role": "agent", "content": final_text})
         return final_text
+
+    def _hung_up(self) -> bool:
+        return any(c.get("capability") in self._terminal_ids for c in self.capability_calls)
 
     def _generate_with_retry(self, attempts: int = 3):
         """generate_content with backoff on transient 5xx / timeout errors, so a
