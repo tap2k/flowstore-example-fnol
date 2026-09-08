@@ -182,8 +182,8 @@ def main(argv=None):
     # Compose the runnable user-sim prompt the same way the flowstore sim does:
     # identity+scenario · medium rail, so this batch harness and the
     # interactive sim produce identical persona prompts. See scripts/_persona.py.
-    _modality = (load_json(project_dir / "agent.json").get("meta", {}).get("modality")
-                 or "voice")
+    from _compile import load_agent
+    _modality = (load_agent(project_dir).get("meta", {}).get("modality") or "voice")
     persona_prompt = compose_persona_prompt(persona_prompt, _modality)
 
     # Voice-realism knobs from the persona's traits (same source the sim reads):

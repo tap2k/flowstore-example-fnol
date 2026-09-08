@@ -228,8 +228,8 @@ def main(argv=None):
     project_dir = resolve_paths(case_path)
 
     # Voice-realism defaults to the agent's declared modality; --voice/--no-voice overrides.
-    _agent_path = project_dir / "agent.json"
-    _modality = (load_json(_agent_path).get("meta") or {}).get("modality") if _agent_path.exists() else None
+    from _compile import load_agent
+    _modality = (load_agent(project_dir).get("meta") or {}).get("modality")
     effective_voice = _persona.resolve_voice(args.voice, _modality)
     if not effective_voice and any(
         isinstance(t, dict) and t.get("barge_in") for t in (case.get("user_turns") or [])

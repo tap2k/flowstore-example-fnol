@@ -142,12 +142,12 @@ $FLOWSTORE_COMPILE_CMD "$PWD" --format prompt --language es-US
 $FLOWSTORE_COMPILE_CMD "$PWD" --format spec
 ```
 
-`--format prompt` emits `{system_prompt, tool_schemas}`. Tool schemas come from the `capabilities/*.capability.json` declarations; the system prompt comes from `agent.json` + `flows/*.flow.json` + `knowledge/` + the guardrails. Pre-context (e.g. a caller authenticated in the app before transfer) is seeded by a persona's `vars` block, which the harness forwards as `--vars-file`; the `known-caller` persona does exactly that for `happy-known-caller`.
+`--format prompt` emits `{system_prompt, tool_schemas}`. Tool schemas come from the `capabilities/*.md` declarations; the system prompt comes from `agent.md` + `flows/*.md` + `knowledge/` + the guardrails. Pre-context (e.g. a caller authenticated in the app before transfer) is seeded by a persona's `vars` block, which the harness forwards as `--vars-file`; the `known-caller` persona does exactly that for `happy-known-caller`.
 
 This compile step is the layer you'll iterate on most often once the cases exist. Three things you can change here, in order of cost:
 
 - **Fixture** (cheap) — edit the situational `vars` / `mocks` on the case (`tests/cases/<id>.test.json`), or the character-intrinsic ones on a persona (`tests/personas/<id>.persona.json`). Useful for "what does the open look like if `caller_name` and `policy_number` are already known?" or "what happens when `cap_file_claim` errors?"
-- **Spec content** (medium) — edit `flows/*.flow.json`, the per-flow `*.scripts.csv`, `knowledge/`, or the `guardrails/*.json`. Each change re-compiles instantly; re-run the suite to see effect.
+- **Spec content** (medium) — edit `flows/*.md` (instructions, scripts, routing), `knowledge/`, or `guardrails/*.md`. Each change re-compiles instantly; re-run the suite to see effect.
 - **Prompt generator** (high) — change the flowstore compiler itself (in the flowstore checkout `FLOWSTORE_COMPILE_CMD` points at). Affects every spec, not just fnol. Reserve for class-of-problem fixes, not one-off tweaks.
 
 ### Phase 4 — run the harness
@@ -230,7 +230,7 @@ Order of investigation (cheapest first):
 
 3. **The spec — flow content.** Did the routing condition on the relevant exit_path match what the caller said? For LLM-method exits (most of them), is the condition's `expression` clear? For calculation-method exits (the safety gate `xp_st_to_defer`, the `flow_route_verified` branches), is the variable it reads actually being set? Is the flow's `instructions` field unambiguous about what to do in this case?
 
-4. **The spec — variables / scripts.** Is the variable a flow references actually declared in `variables.json`? Does a script template a `{placeholder}` for a variable that never gets bound (the leaked-placeholder failure)? Is a distinctive close phrase missing from the relevant `*.scripts.csv` so there's nothing for an assertion to anchor on?
+4. **The spec — variables / scripts.** Is the variable a flow references actually declared in `variables.yaml`? Does a script template a `{placeholder}` for a variable that never gets bound (the leaked-placeholder failure)? Is a distinctive close phrase missing from the relevant flow's `## Scripts` so there's nothing for an assertion to anchor on?
 
 5. **The prompt generator (the flowstore compiler).** Does the compiled prompt actually contain the routing information the spec encodes? Compile with `--format prompt` and read it. Common: a guardrail declared but rendered weakly; routing alternatives rendered as soft suggestions the LLM treats as optional rather than as a gate; a capability output that the spec says "binds into scope" but the prompt never tells the model to expect.
 

@@ -89,7 +89,7 @@ def provided_vars(project: Path, vars_dict: dict[str, Any] | None) -> dict[str, 
     context_vars for persona/scripted runs.
 
     Filtered by `provided: true` in the variable declarations
-    (variables.json — the dialer-payload contract). Everything else in the
+    (variables.yaml — the dialer-payload contract). Everything else in the
     character sheet is edit-time ground truth the agent must earn through
     conversation or mocks; for this outbound agent that is just
     identity_confirmed (set by an in-conversation assign). Decision tests
@@ -98,8 +98,8 @@ def provided_vars(project: Path, vars_dict: dict[str, Any] | None) -> dict[str, 
     """
     if not vars_dict:
         return {}
-    declared = json.loads((Path(project) / "variables.json").read_text(encoding="utf-8")) \
-        .get("variables") or {}
+    from _compile import load_agent
+    declared = load_agent(project).get("variables") or {}
     return {k: v for k, v in vars_dict.items()
             if (declared.get(k) or {}).get("provided")}
 
@@ -410,22 +410,12 @@ def prompt_source_label(target: str, endpoint_url: str | None = None) -> str:
 # alternative --target surfaces for run_golds (a live flowstore-runner or a
 # deployed agent) and share the same start/turn/end/extras interface.
 
-def _iter_capability_files(project_dir: Path):
-    cap_dir = project_dir / "capabilities"
-    if not cap_dir.is_dir():
-        return
-    for path in sorted(cap_dir.glob("*.capability.json")):
-        yield path
-
-
 def name_to_id(agent_dict, project_dir=None):
     """Build a {capability_name -> capability_id} map.
 
-    agent.json doesn't enumerate capabilities, so the authoritative source is
-    the capabilities/*.capability.json files (each declares both id and name).
-    If a compiled spec dict is passed in place of agent_dict and carries a
-    "capabilities" array, we honour that too. project_dir is required to read
-    the capability files when agent_dict alone doesn't list them.
+    The resolved agent envelope (from _compile.load_agent) enumerates the
+    capabilities; project_dir is accepted for callers that pass a bare dict
+    and lets us resolve the envelope ourselves.
     """
     mapping: dict[str, str] = {}
 
@@ -440,12 +430,11 @@ def name_to_id(agent_dict, project_dir=None):
             if cid and cname:
                 mapping[cname] = cid
 
-    # 2) Otherwise (or additionally) read the capability files on disk.
-    if project_dir is not None:
-        for path in _iter_capability_files(Path(project_dir)):
-            cap = json.loads(path.read_text(encoding="utf-8"))
-            cid = cap.get("id")
-            cname = cap.get("name")
+    # 2) Otherwise resolve the envelope from the compiler.
+    if not mapping and project_dir is not None:
+        from _compile import load_agent
+        for cap in load_agent(project_dir).get("capabilities") or []:
+            cid, cname = cap.get("id"), cap.get("name")
             if cid and cname:
                 mapping.setdefault(cname, cid)
 
@@ -777,16 +766,16 @@ class Conversation:
 def resolve_paths(tests_file):
     """From a tests/<...>/<file> path, resolve the project_dir.
 
-    The project root is the nearest ancestor that contains agent.json — we walk
+    The project root is the nearest ancestor that contains agent.md — we walk
     up from the test file until we find it. Returns just the project_dir; the
     flowstore checkout location is no longer needed here (the compiler is invoked
     via FLOWSTORE_COMPILE_CMD; see scripts/_compile.py).
     """
     p = Path(tests_file).resolve()
     for ancestor in [p] + list(p.parents):
-        if (ancestor / "agent.json").is_file():
+        if (ancestor / "agent.md").is_file():
             return ancestor
-    raise RuntimeError(f"could not find a flowstore project (agent.json) above {tests_file}")
+    raise RuntimeError(f"could not find a flowstore project (agent.md) above {tests_file}")
 
 
 def default_model(project_dir, role=None):

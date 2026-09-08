@@ -65,14 +65,15 @@ def compile_prompt(project_dir, language=None, vars_file=None,
                    system_prompt_override=None):
     """Compile a flowstore project to (system_prompt, tool_schemas, agent_dict).
 
-    - project_dir: path (str or Path) to the project root (the dir with agent.json).
+    - project_dir: path (str or Path) to the project root (the dir with agent.md).
     - language: optional language code (e.g. "ES"); falls back to the project default.
     - vars_file: optional path to a variables override file.
     - system_prompt_override: optional path to a file whose contents replace the
       compiled system prompt (tool schemas still come from the compiler).
 
     Returns (system_prompt: str, tool_schemas: list[dict], agent_dict: dict).
-    agent_dict is the parsed agent.json (handy for ids, languages, etc.).
+    agent_dict is the resolved agent envelope from ``--format spec`` (ids,
+    languages, variables, capabilities) — the harness never parses source files.
     """
     project_dir = Path(project_dir)
     raw = _run_compile(project_dir, "prompt", language=language, vars_file=vars_file)
@@ -81,8 +82,20 @@ def compile_prompt(project_dir, language=None, vars_file=None,
     tool_schemas = compiled.get("tool_schemas", []) or []
     if system_prompt_override:
         system_prompt = Path(system_prompt_override).read_text(encoding="utf-8")
-    agent_dict = json.loads((project_dir / "agent.json").read_text(encoding="utf-8"))
-    return system_prompt, tool_schemas, agent_dict
+    return system_prompt, tool_schemas, load_agent(project_dir)
+
+
+_AGENT_CACHE: dict[str, dict] = {}
+
+
+def load_agent(project_dir):
+    """The resolved agent envelope (``compile_spec(...)["agent"]``), cached per
+    project for the process. Source files are markdown + YAML; the compiler is
+    the only parser of them."""
+    key = str(Path(project_dir).resolve())
+    if key not in _AGENT_CACHE:
+        _AGENT_CACHE[key] = compile_spec(project_dir).get("agent") or {}
+    return _AGENT_CACHE[key]
 
 
 def compile_spec(project_dir, language=None, vars_file=None):

@@ -1,0 +1,23 @@
+---
+name: file_claim
+kind: function
+inputs:
+  - caller_name
+  - policy_number
+  - incident_when
+  - incident_location
+  - incident_description
+  - fault_assessment
+  - police_report_filed
+  - police_report_number
+  - vehicle_drivable
+  - damage_areas
+  - other_party_name
+  - other_party_insurer
+  - other_party_contact
+  - photos_promised
+outputs:
+  - claim_id
+  - estimated_callback_window
+---
+File the claim record with all gathered intake data. Outputs (claim_id, estimated_callback_window) bind into scope on exit-fire.

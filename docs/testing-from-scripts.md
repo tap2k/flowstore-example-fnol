@@ -151,7 +151,7 @@ Fields:
 - **`evaluators`** — names. Each resolves to a rubric (`tests/rubrics/<name>.rubric.json`, an LLM judge) if one exists, else a Python evaluator (`tests/evaluators/<name>.py`). This repo ships both — see [§ Evaluators](#evaluators).
 - **`persona_id`** — the referenced-persona actor (`tests/personas/<persona_id>.persona.json`), whose `system_prompt` drives a simulated caller and whose intrinsic fixture this case inherits (`persona ∪ case`). `persona-panicking` / `persona-impatient-human` / `persona-redteam-fault` are the examples. Mutually exclusive with `user_turns` / `system_prompt`.
 - **`system_prompt`** — the inline-actor alternative to `persona_id`: a one-off simulated-user prompt for a case that doesn't warrant a reusable persona file. Mutually exclusive with `user_turns` / `persona_id`.
-- **`vars`** — situational `{name: value}` context vars for this scenario, coerced against `variables.json`. Merged over the bound persona's intrinsic `vars` (case wins per key) and forwarded to the compiler's `--vars-file` as pre-context.
+- **`vars`** — situational `{name: value}` context vars for this scenario, coerced against `variables.yaml`. Merged over the bound persona's intrinsic `vars` (case wins per key) and forwarded to the compiler's `--vars-file` as pre-context.
 - **`mocks`** — situational `{capability_id: behavior}` for this scenario. Merged over the persona's intrinsic `mocks`, **replacing** per capability id (case wins). A scripted/inline case carries its whole mock set here. Behavior shape is the embedded mock-behavior union — `{ "kind": "static", "returns": {...} }` or `{ "kind": "error", "error": "..." }`.
 - **`gold_id`** — optional. Names a `tests/gold/<gold_id>.gold.json`; the harness loads it and passes it to the rubric judge as `{gold_standard}` (so `claim_filed_correctly` can compare against the reference transcript).
 - **`model`** — optional. Pins the case to a model id; falls back to `models/defaults.json` `default` (`gemini-2.5-flash`).
@@ -184,7 +184,7 @@ A persona is a reusable **actor**: a required `system_prompt` that `run_persona.
 Only the intrinsic fixture lives here: the `verify_policy` return names **Jordan Reese**, matching the caller the `system_prompt` describes — so identity can't drift. The situational mocks for this scenario (`cap_file_claim`, `cap_schedule_adjuster`) live on the binding case (`persona-panicking`).
 
 - **`system_prompt`** — **required**; the actor's voice. `run_persona.py` runs it as the system instruction for a Gemini "user" that converses with the compiled agent, alternating up to `case.max_turns` agent turns.
-- **`vars`** — character-intrinsic `{name: value}` dict, coerced against `variables.json`. Merged under the case's `vars` at run time and forwarded to the compiler's `--vars-file` (`scripts/_agent.py` `resolve_fixture` → `vars_to_tempfile`). Situational vars go on the case.
+- **`vars`** — character-intrinsic `{name: value}` dict, coerced against `variables.yaml`. Merged under the case's `vars` at run time and forwarded to the compiler's `--vars-file` (`scripts/_agent.py` `resolve_fixture` → `vars_to_tempfile`). Situational vars go on the case.
 - **`mocks`** — character-intrinsic `{capability_id: behavior}` (e.g. the identity-keyed `verify_policy` return). Each behavior is the embedded mock-behavior union: `{ "kind": "static", "returns": {...} }` returns its object verbatim every call, and `{ "kind": "error", "error": "..." }` hands the LLM the error string so the agent has to recover. A case's mock **replaces** the persona's for the same capability id. Capabilities with no mock yield a soft error into the transcript (see [§ Mock dispatch](#mock-dispatch-contract)).
 - **`model`** — optional; falls back to `models/defaults.json` `roles.user_simulation`.
 
@@ -243,7 +243,7 @@ Required: `$schema`, `test_case_id`, `timestamp`, `transcript`.
 
 Optional:
 
-- `agent_id`, `model` — for traceability. `agent_id` is read from `agent.json` (`agent_northwind_fnol`).
+- `agent_id`, `model` — for traceability. `agent_id` comes from the compiled spec (`agent_northwind_fnol`).
 - `prompt_source` — `"flowstore-compile"` for runs against the compiled prompt, or the override file path when `--system-prompt` was passed (the comparison run). See [§ Comparing prompts](#comparing-prompts).
 - `capability_calls` — one per tool call the agent made. **`capability` is the stable capability id** (`cap_file_claim`), not the runtime name — so evaluators pivot on a stable identifier. Needed for `tool_calls_check`.
 - `final_variables` — for `state_check`-style evaluation. **Empty on the compiled-prompt target** (the harness doesn't track scope); a runner populates it.
@@ -317,7 +317,7 @@ A subtle but important distinction. Each capability declares both:
 - **`id`** (e.g. `cap_file_claim`) — the stable reference. A persona's `mocks` key on it, `capability_assertions` key on it, `result.capability_calls[].capability` is it.
 - **`name`** (e.g. `file_claim`) — the snake_case **runtime dispatch identifier**. This is what the compiler emits in `tool_schemas[].name` and what the LLM returns when it tool-calls.
 
-Your script needs to translate. `name_to_id()` builds the `{name → id}` map by reading `capabilities/*.capability.json` (each declares both), and `_record_call` translates the called tool name to the id before recording it, so `result.capability_calls[].capability` is always the id. That's what lets `tool_calls_check` and `capability_assertions` pivot on a stable identifier regardless of provider naming quirks.
+Your script needs to translate. `name_to_id()` builds the `{name → id}` map from the compiled spec's capabilities (the harness never parses source files), and `_record_call` translates the called tool name to the id before recording it, so `result.capability_calls[].capability` is always the id. That's what lets `tool_calls_check` and `capability_assertions` pivot on a stable identifier regardless of provider naming quirks.
 
 ---
 

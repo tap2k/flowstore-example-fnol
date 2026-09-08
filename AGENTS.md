@@ -18,7 +18,7 @@ This is the **exhaustive** flowstore example — it exercises every flow type, t
 
 A spec is one logical object with two parts:
 
-- An **agent envelope** — `meta` (name, languages, `entry_flow_id`, `chatbot_initiates`), `guardrails`, `knowledge`, `capabilities`, `variables`, `business_goals`. This repo uses **full file-model decomposition**: a thin `agent.json`, a `guardrails/` directory, `business-goals.json`, `variables.json`, `capabilities/*.capability.json`, and `knowledge/` (FAQ, glossary, a knowledge table).
+- An **agent envelope** — `meta` (name, languages, `entry_flow_id`, `chatbot_initiates`), `guardrails`, `knowledge`, `capabilities`, `variables`, `business_goals`. The source is markdown with YAML frontmatter: a thin `agent.md`, a `guardrails/` directory, `business-goals.yaml`, `variables.yaml`, `capabilities/*.md`, and `knowledge/` (FAQ, glossary, a knowledge table). The JSON in SCHEMA.md is what these parse into; nothing here is hand-edited as JSON.
 - A **graph of flows** — the units of conversational behavior. Each flow has `instructions`, per-language `scripts`, and a `type` (`happy` / `sad` / `off` / `utility` / `interrupt`). The first four are organizational; `interrupt` is structural — globally callable, so any flow can pivot to it when its entry condition matches (here: `int_human_handoff`, `int_policy_question`, `int_calming`, `int_cancel_claim`).
 
 **Exit paths** are the edges. Each has a `condition` (when it's taken) and a `goto` (another flow id, `END`, or `RETURN`). A flow with any `RETURN` exit is **callable** — entering it pushes a call frame. Conditions and assigns use one of three **methods**: `llm` (semantic judgment), `calculation` (a deterministic Python-like expression over variables), or `direct` (a literal).
@@ -31,14 +31,14 @@ A spec is one logical object with two parts:
 
 ```
 fnol/
-├── flowstore.json                 project manifest
-├── agent.json                     thin envelope: meta, languages, chatbot_initiates, entry_flow_id
+├── flowstore.yaml                 project manifest
+├── agent.md                       envelope in frontmatter: identity, languages, chatbot_initiates, entry_flow_id
 ├── guardrails/                    project guardrails — directory form (safety, compliance, conduct)
-├── business-goals.json            project business goals (file form)
-├── variables.json                 typed variable declarations (file form)
-├── capabilities/<id>.capability.json   6 capability declarations (function + retrieval)
-├── knowledge/                     faq.json, glossary.json, tables/tbl_claim_types
-├── flows/                         16 flows — all five types (<id>.flow.json + <id>.scripts.csv)
+├── business-goals.yaml            project business goals
+├── variables.yaml                 typed variable declarations
+├── capabilities/<id>.md           6 capability declarations (function + retrieval)
+├── knowledge/                     faq.md, glossary.md, tables/tbl_claim_types.md
+├── flows/<id>.md                  16 flows — all five types; routing in frontmatter, prose + scripts in the body
 ├── comments/                      anchored review threads
 ├── models/defaults.json           default + judge/user-sim roles
 ├── prompts/                       GOLD-EXTRACTION-PROMPT.txt
@@ -47,7 +47,7 @@ fnol/
 └── scripts/                       Python test harness (Gemini)
 ```
 
-Every `.json` carries a `$schema` URI and is validated on load. The README's "Feature → where it's demonstrated" map says exactly which flow/file shows off each capability.
+Every file is validated on load. The README's "Feature → where it's demonstrated" map says exactly which flow/file shows off each capability.
 
 ---
 

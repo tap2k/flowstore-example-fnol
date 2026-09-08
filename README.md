@@ -128,21 +128,21 @@ spec.
 
 ```
 fnol/
-├── flowstore.json                 project manifest
-├── agent.json                     thin envelope: meta, languages, chatbot_initiates, entry_flow_id
+├── flowstore.yaml                 project manifest
+├── agent.md                       envelope in frontmatter: identity, languages, chatbot_initiates, entry_flow_id
 ├── guardrails/                    project guardrails — DIRECTORY form, grouped by concern
-│   ├── safety.json   compliance.json   conduct.json
-├── business-goals.json            project business goals (llm + calculation) — file form
-├── variables.json                 typed variable declarations — file form
+│   ├── safety.md   compliance.md   conduct.md      one "- id: statement" line each
+├── business-goals.yaml            project business goals (llm + calculation)
+├── variables.yaml                 typed variable declarations
 ├── capabilities/
-│   └── <id>.capability.json       6 capability declarations (retrieval + function)
+│   └── <id>.md                    6 capability declarations (retrieval + function); body = description
 ├── knowledge/
-│   ├── faq.json                   LocalizedString answers (en-US / es-US) — file form
-│   ├── glossary.json
-│   └── tables/tbl_claim_types.{meta.json,csv}
+│   ├── faq.md                     "### id: question" then en-US / es-US answer lines
+│   ├── glossary.md
+│   └── tables/tbl_claim_types.md  structure in frontmatter, rows as a pipe table
 ├── flows/
-│   ├── <id>.flow.json             16 flows — all five types
-│   └── <id>.scripts.csv           per-flow utterances, en-US + es-US columns
+│   └── <id>.md                    16 flows — all five types; routing in frontmatter,
+│                                  instructions + en-US / es-US scripts in the body
 ├── comments/                      anchored review threads (flow + exit_path)
 ├── models/defaults.json           default + judge/user-sim roles (Gemini)
 ├── tests/
@@ -159,7 +159,7 @@ fnol/
     └── smoke.py                   static check that the runners and helpers agree
 ```
 
-Every `.json` carries a `$schema` URI and is validated on load.
+Every file is validated on load; ids are explicit (filenames, `### id` headings, `- id:` lines).
 
 ---
 
@@ -177,13 +177,13 @@ Every `.json` carries a `$schema` URI and is validated on load.
 ### Schema / spec features
 | Feature | Where |
 |---|---|
-| Full file-model decomposition | thin `agent.json` + `guardrails/` + `business-goals.json` + `variables.json` + `capabilities/*.capability.json` + `knowledge/` |
-| Collection **directory form** | `guardrails/{safety,compliance,conduct}.json` |
-| Collection **file form** | `business-goals.json`, `variables.json`, `knowledge/faq.json` |
+| Full file-model decomposition | thin `agent.md` + `guardrails/` + `business-goals.yaml` + `variables.yaml` + `capabilities/*.md` + `knowledge/` |
+| Collection **directory form** | `guardrails/{safety,compliance,conduct}.md` |
+| Collection **file form** | `business-goals.yaml`, `variables.yaml`, `knowledge/faq.md` |
 | `retrieval` capability + `retrieve_on_turn` | `cap_lookup_coverage` wired into `int_policy_question` |
 | Capability **outputs bind to scope** | `cap_verify_policy` (→ `policy_active`), `cap_file_claim` (→ `claim_id`) |
 | `non_blocking` capability + `pending_message` | `cap_schedule_adjuster` (fire-and-forget callback booking, no outputs) |
-| `system_prompt` template (`{{generated}}` + preamble/postamble, LocalizedString) | `agent.json` |
+| `system_prompt` template (`{{generated}}` + preamble/postamble) | the body of `agent.md` |
 | Calc-route-after-action junction | `flow_route_verified` branches on the bound `policy_active` |
 | `calculation` vs `llm` conditions | `flow_safety_triage` exits (calc safety gate + llm proceed) |
 | `max_turns` turn-budget exit | `flow_policy_not_found` → `xp_pnf_budget` |
@@ -191,11 +191,11 @@ Every `.json` carries a `$schema` URI and is validated on load.
 | Flow-scoped guardrail | `flow_safety_triage` (`gr_st_safety_gate`) |
 | Flow-scoped FAQ | `int_policy_question` |
 | `example` transcript / `notes` | `flow_review_and_file` (example); `flow_route_verified`, several exits (notes) |
-| Multilingual scripts (en-US / es-US) | every `flows/*.scripts.csv` |
-| `LocalizedString` FAQ answers | `knowledge/faq.json` |
+| Multilingual scripts (en-US / es-US) | `## Scripts` in every `flows/*.md` |
+| `LocalizedString` FAQ answers | `knowledge/faq.md` |
 | Knowledge table (+ `scaling_rule`) | `knowledge/tables/tbl_claim_types` |
-| Glossary | `knowledge/glossary.json` |
-| Business goals (`llm` + `calculation`) | `business-goals.json` |
+| Glossary | `knowledge/glossary.md` |
+| Business goals (`llm` + `calculation`) | `business-goals.yaml` |
 | Anchored review comments | `comments/` (a flow thread + an `exit_path` anchor) |
 
 ### Test types

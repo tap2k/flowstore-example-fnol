@@ -4,7 +4,7 @@ the same outcome as the gold.
 
 Each gold (tests/gold/*.gold.json) is self-contained: it carries the customer
 world in its own `vars` field, so there is no shared vars-file or extras-file.
-The agent's language is read from agent.json, so there is no --language flag.
+The agent's language is read from the compiled spec, so there is no --language flag.
 
 Modes:
   single gold   python scripts/run_golds.py tests/gold/happy-path-1.gold.json
@@ -162,9 +162,10 @@ except FileNotFoundError as e:
     sys.exit(str(e))
 rubrics = [OUTCOME_MATCHES_GOLD_RUBRIC] + extra_rubrics
 
-# ---- agent.json ----
+# ---- agent envelope (resolved by the compiler) ----
 
-agent_envelope = json.loads((PROJECT / "agent.json").read_text())
+from _compile import load_agent  # noqa: E402
+agent_envelope = load_agent(PROJECT)
 chatbot_initiates = bool(agent_envelope.get("chatbot_initiates", False))
 agent_language: str | None = (agent_envelope.get("meta", {}).get("languages") or [None])[0]
 
