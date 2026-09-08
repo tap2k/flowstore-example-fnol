@@ -2,12 +2,12 @@
 Replay gold transcripts against the agent and judge whether the agent reaches
 the same outcome as the gold.
 
-Each gold (tests/gold/*.gold.json) is self-contained: it carries the customer
+Each gold (tests/gold/*.md) is self-contained: it carries the customer
 world in its own `vars` field, so there is no shared vars-file or extras-file.
 The agent's language is read from the compiled spec, so there is no --language flag.
 
 Modes:
-  single gold   python scripts/run_golds.py tests/gold/happy-path-1.gold.json
+  single gold   python scripts/run_golds.py tests/gold/happy-path-1.md
   suite         python scripts/run_golds.py --all
   hand-authored python scripts/run_golds.py --all --system-prompt path/to/prompt.txt
 
@@ -54,9 +54,9 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument(
     "golds", nargs="*",
-    help="One or more paths to tests/gold/<id>.gold.json. Omit when using --all.",
+    help="One or more paths to tests/gold/<id>.md (or bare ids). Omit when using --all.",
 )
-parser.add_argument("--all", action="store_true", help="Glob tests/gold/*.gold.json.")
+parser.add_argument("--all", action="store_true", help="Every gold in tests/gold.")
 parser.add_argument(
     "--system-prompt", type=Path, default=None,
     help="Override the compiled spec with a hand-authored .txt prompt. "
@@ -88,7 +88,8 @@ PROJECT = Path(__file__).resolve().parents[1]
 # ---- resolve gold paths ----
 
 if args.all:
-    gold_paths = sorted((PROJECT / "tests" / "gold").glob("*.gold.json"))
+    from _artifacts import list_ids
+    gold_paths = [PROJECT / "tests" / "gold" / f"{i}.md" for i in sorted(list_ids(PROJECT, "golds"))]
     if not gold_paths:
         sys.exit(f"no golds found in {PROJECT / 'tests' / 'gold'}")
 elif args.golds:
@@ -284,7 +285,11 @@ if args.system_prompt:
     print(f"system-prompt={args.system_prompt}")
 
 for gold_path in gold_paths:
-    gold = json.loads(gold_path.read_text(encoding="utf-8"))
+    from _artifacts import load_gold
+    gold = load_gold(PROJECT, gold_path)
+    if gold is None:
+        print(f"  SKIP: no gold {gold_path.stem!r}", file=sys.stderr)
+        continue
     gold_id = gold.get("id") or gold_path.stem.removesuffix(".gold")
     vars_: dict[str, Any] = gold.get("vars") or {}
     user_turns = [t.get("text", "") for t in gold.get("turns", []) if t.get("role") == "user"]

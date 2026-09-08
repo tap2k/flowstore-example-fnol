@@ -58,7 +58,7 @@ Five phases, each with a concrete artifact. The phases below are the order you d
 
 ### Phase 1 — gold transcripts
 
-A **gold** is a verbatim example conversation. It is *not* a rule about what the agent should do (that's the spec); it's a captured trajectory through whatever rules apply. Stored as `tests/gold/<id>.gold.json` matching `flowstore://test/gold/v0`. This repo ships three: `happy_claim_filed`, `emergency_defer`, `policy_not_found`.
+A **gold** is a verbatim example conversation. It is *not* a rule about what the agent should do (that's the spec); it's a captured trajectory through whatever rules apply. Stored as `tests/gold/<id>.md` matching `flowstore://test/gold/v0`. This repo ships three: `happy_claim_filed`, `emergency_defer`, `policy_not_found`.
 
 ```json
 {
@@ -87,12 +87,12 @@ Three sources of golds, in order of preference:
 # material into any LLM CLI and capture the gold-collection JSON.
 cat prompts/GOLD-EXTRACTION-PROMPT.txt customer-source.txt | \
   your-llm-cli > /tmp/fnol-golds.json
-# Then split the collection's golds[] into individual tests/gold/<id>.gold.json files.
+# Then split the collection's golds[] into individual tests/gold/<id>.md files.
 ```
 
 ### Phase 2 — derive test cases from golds
 
-A gold is the source of truth; a **test case** is the executable extraction. The case carries the user side of the gold's turns plus assertions over what the agent must (or must not) say in response, the mocks to use, and the evaluators to run. Stored as `tests/cases/<id>.test.json` matching `flowstore://test/case/v0`. The case can point back at its gold via `gold_id`, which the rubric judge reads for a side-by-side comparison.
+A gold is the source of truth; a **test case** is the executable extraction. The case carries the user side of the gold's turns plus assertions over what the agent must (or must not) say in response, the mocks to use, and the evaluators to run. Stored as `tests/cases/<id>.md` matching `flowstore://test/case/v0`. The case can point back at its gold via `gold_id`, which the rubric judge reads for a side-by-side comparison.
 
 ```json
 {
@@ -123,9 +123,9 @@ A gold is the source of truth; a **test case** is the executable extraction. The
 
 The case binds its world (the policy-active + claim-filed mocks) through `persona_id`; the persona's `mocks` are what fire when the agent tool-calls. See [testing-from-scripts.md § File shapes](testing-from-scripts.md#file-shapes-you-need-to-know) for the persona shape.
 
-The case is what `scripts/run_scripted.py` executes. The gold is what reviewers compare against to argue about whether the *assertions* themselves are right, and what the `claim_filed_correctly` rubric grades against. Keep both. `tests/cases/happy-claim-filed.test.json` is the full worked example — read it alongside its gold.
+The case is what `scripts/run_scripted.py` executes. The gold is what reviewers compare against to argue about whether the *assertions* themselves are right, and what the `claim_filed_correctly` rubric grades against. Keep both. `tests/cases/happy-claim-filed.md` is the full worked example — read it alongside its gold.
 
-You can hand-author the case from the gold (that's how the cases here were built), or derive it mechanically with an LLM the same way phase 1 derives golds: bundle each gold with the compiled spec, prompt a model to pick distinctive substring assertions drawn from the actual flow scripts and negative assertions seeded from the project guardrails, then write `tests/cases/<id>.test.json`. Either way, review the substring choices: routing-distinctive language sometimes needs a human eye, and an over-literal assertion fails on benign paraphrase. (This repo ships no derivation prompt — only the gold-extraction one above. Write your own if you want to mechanize phase 2.)
+You can hand-author the case from the gold (that's how the cases here were built), or derive it mechanically with an LLM the same way phase 1 derives golds: bundle each gold with the compiled spec, prompt a model to pick distinctive substring assertions drawn from the actual flow scripts and negative assertions seeded from the project guardrails, then write `tests/cases/<id>.md`. Either way, review the substring choices: routing-distinctive language sometimes needs a human eye, and an over-literal assertion fails on benign paraphrase. (This repo ships no derivation prompt — only the gold-extraction one above. Write your own if you want to mechanize phase 2.)
 
 ### Phase 3 — compile the spec to a prompt
 
@@ -146,7 +146,7 @@ $FLOWSTORE_COMPILE_CMD "$PWD" --format spec
 
 This compile step is the layer you'll iterate on most often once the cases exist. Three things you can change here, in order of cost:
 
-- **Fixture** (cheap) — edit the situational `vars` / `mocks` on the case (`tests/cases/<id>.test.json`), or the character-intrinsic ones on a persona (`tests/personas/<id>.persona.json`). Useful for "what does the open look like if `caller_name` and `policy_number` are already known?" or "what happens when `cap_file_claim` errors?"
+- **Fixture** (cheap) — edit the situational `vars` / `mocks` on the case (`tests/cases/<id>.md`), or the character-intrinsic ones on a persona (`tests/personas/<id>.md`). Useful for "what does the open look like if `caller_name` and `policy_number` are already known?" or "what happens when `cap_file_claim` errors?"
 - **Spec content** (medium) — edit `flows/*.md` (instructions, scripts, routing), `knowledge/`, or `guardrails/*.md`. Each change re-compiles instantly; re-run the suite to see effect.
 - **Prompt generator** (high) — change the flowstore compiler itself (in the flowstore checkout `FLOWSTORE_COMPILE_CMD` points at). Affects every spec, not just fnol. Reserve for class-of-problem fixes, not one-off tweaks.
 
@@ -156,13 +156,13 @@ The default target is the compiled prompt driven by Gemini (swappable — the pr
 
 ```bash
 # Scripted case (fixed user_turns + assertions + mocks + rubrics + gold compare)
-python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json --label flowstore
+python scripts/run_scripted.py tests/cases/happy-claim-filed.md --label flowstore
 
 # Decision test (pin a point, fan out branch inputs — one fresh convo per branch)
-python scripts/run_decision.py tests/decisions/safety-triage-routing.decision.json
+python scripts/run_decision.py tests/decisions/safety-triage-routing.yaml
 
 # Persona-driven case (LLM-as-user converses with the agent; rubrics grade the transcript)
-python scripts/run_persona.py tests/cases/persona-panicking.test.json
+python scripts/run_persona.py tests/cases/persona-panicking.md
 ```
 
 `run_scripted.py` feeds `user_turns` verbatim, evaluates the case's per-turn `assertions`, `transcript_assertions`, `state_assertions`, `capability_assertions`, and named `evaluators`, and writes one `flowstore://run/result/v0` file to `tests/runs/<UTCstamp>-<label>/<case_id>.result.json`. Stdout prints `evaluators: P/N passed`.
@@ -195,7 +195,7 @@ The assertions you write are the contract. Bad assertions silently legitimize ba
 
 **Always assert the no-leaked-placeholder regex on happy paths.** `{ "kind": "regex", "pattern": "\\{[a-zA-Z_][a-zA-Z0-9_]*\\}", "must_appear": false }` catches an un-substituted `{policy_number}` / `{claim_id}` / `{callback_number}` leaking into a reply. Cheap, and it catches a whole class of generator/variable-binding bugs.
 
-**Lowercase substring matching is the default. Live with the consequences.** The harness lowercases both sides (`scripts/run_scripted.py`), so an agent that says "An ADJUSTER will reach out" passes `must_contain: ["adjuster"]`. But "your claims rep will follow up" does not. If you want paraphrase tolerance, you want an LLM judge — that's the rubric path (`tests/rubrics/*.rubric.json`), a different evaluator category. Use rubrics for tone and outcome ("stayed empathetic," "deflected every premium question"), substrings for hard facts.
+**Lowercase substring matching is the default. Live with the consequences.** The harness lowercases both sides (`scripts/run_scripted.py`), so an agent that says "An ADJUSTER will reach out" passes `must_contain: ["adjuster"]`. But "your claims rep will follow up" does not. If you want paraphrase tolerance, you want an LLM judge — that's the rubric path (`tests/rubrics/*.md`), a different evaluator category. Use rubrics for tone and outcome ("stayed empathetic," "deflected every premium question"), substrings for hard facts.
 
 **Don't assert on placeholder substitution unless you're testing the substitution.** Asserting a digit-by-digit readback like `"7-7-4-2-1-0-9"` only catches one rendering; the model might read it back as "seven seven four two..." (also correct). Either assert on a stable token the mock returns (`NW-2026-018472`) or grade the readback behavior with a rubric instead of a substring.
 
@@ -213,7 +213,7 @@ The harness pins `temperature=0.0`, but that's the floor on variation, not the c
 
 ```bash
 # Run the red-team fault-fishing persona 5 times; inspect trials[] for variance.
-python scripts/run_persona.py tests/cases/persona-redteam-fault.test.json --trials 5 --label redteam
+python scripts/run_persona.py tests/cases/persona-redteam-fault.md --trials 5 --label redteam
 ```
 
 **Don't optimize "to N/N forever."** Some variance is structural. The bar is "the prompt produces the right behavior reliably enough for the use case." For a low-stakes paraphrase, the occasional miss is fine; for the safety gate (`safety_first_observed` / the 911 prompt) and the no-fabrication regex, the bar is much higher — those are the checks worth running at higher trial counts and treating any miss as a real failure rate.
@@ -234,7 +234,7 @@ Order of investigation (cheapest first):
 
 5. **The prompt generator (the flowstore compiler).** Does the compiled prompt actually contain the routing information the spec encodes? Compile with `--format prompt` and read it. Common: a guardrail declared but rendered weakly; routing alternatives rendered as soft suggestions the LLM treats as optional rather than as a gate; a capability output that the spec says "binds into scope" but the prompt never tells the model to expect.
 
-6. **The model.** Is the model under-spec'd for the task? The default is `gemini-2.5-flash` (`models/defaults.json`); a long bilingual prompt with multi-flow routing and digit readbacks can strain a fast model. Pin a stronger model on the case (`"model": "..."`) and see if half the brittleness disappears for free. Worth trying before deeper spec/generator surgery.
+6. **The model.** Is the model under-spec'd for the task? The default is `gemini-2.5-flash` (`models/models.yaml`); a long bilingual prompt with multi-flow routing and digit readbacks can strain a fast model. Pin a stronger model on the case (`"model": "..."`) and see if half the brittleness disappears for free. Worth trying before deeper spec/generator surgery.
 
 Note that `state_assertions` are a special case of "red for a structural reason": the compiled-prompt target doesn't track a variable bag, so `final_variables` is always empty and every `state_assertion` reports "needs a native runner." That's expected here, which is why none of this repo's cases carry `state_assertions` — there is no public runner to satisfy them. The shape is documented in [testing-from-scripts.md](testing-from-scripts.md#state-assertions-and-the-runner-boundary); a deployed flowstore runner that tracks scope is what turns it green.
 
@@ -246,10 +246,10 @@ The harness can run the same case against two different system prompts with ever
 
 ```bash
 # A: the flowstore-compiled prompt
-python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json --label flowstore
+python scripts/run_scripted.py tests/cases/happy-claim-filed.md --label flowstore
 
 # B: a hand-authored prompt, same case, same mocks, same model
-python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json \
+python scripts/run_scripted.py tests/cases/happy-claim-filed.md \
   --system-prompt ~/northwind/their-prompt.txt --label handauth
 ```
 
@@ -265,7 +265,7 @@ There is no `--system-prompt-extras` flag in this harness — the only system-pr
 
 ## Anti-patterns
 
-**Writing the test case directly without a gold.** Skipping the gold and going straight to `*.test.json` is fast but tempts you to write assertions that match what *you think* the prompt should say, not what a real call would say. The gold is what makes the case defensible in review — and what the `claim_filed_correctly` rubric grades against.
+**Writing the test case directly without a gold.** Skipping the gold and going straight to `tests/cases/*.md` is fast but tempts you to write assertions that match what *you think* the prompt should say, not what a real call would say. The gold is what makes the case defensible in review — and what the `claim_filed_correctly` rubric grades against.
 
 **One assertion per turn, every turn.** Over-asserting locks the spec into one phrasing forever. Reserve deterministic assertions for turns that test a load-bearing property (the 911 prompt, the filed claim id, the no-fabrication regex); let rubrics handle the soft judgments.
 
@@ -283,7 +283,7 @@ There is no `--system-prompt-extras` flag in this harness — the only system-pr
 
 Things that aren't built into this harness yet but the loop wants to mature past v1.
 
-- **LLM-as-judge is shipped, but state tracking isn't.** Rubrics work (`tests/rubrics/*.rubric.json`, judged via `scripts/_judge.py`). What's missing on the prompt target is variable-scope tracking, which is why `final_variables` is empty and `state_assertions` can't be evaluated here. A deployed flowstore **runner** that tracks scope, fires exit `actions`, and executes `retrieve_on_turn` is the alternative target that turns those green — the file shapes are runner-neutral by design.
+- **LLM-as-judge is shipped, but state tracking isn't.** Rubrics work (`tests/rubrics/*.md`, judged via `scripts/_judge.py`). What's missing on the prompt target is variable-scope tracking, which is why `final_variables` is empty and `state_assertions` can't be evaluated here. A deployed flowstore **runner** that tracks scope, fires exit `actions`, and executes `retrieve_on_turn` is the alternative target that turns those green — the file shapes are runner-neutral by design.
 
 - **Suite-level aggregation.** Each run writes a per-case `result.json`; persona runs carry `trials[]`, but there's no suite-level manifest rolling up pass rates across cases or across time. Today you read the `tests/runs/<dir>/` files directly.
 

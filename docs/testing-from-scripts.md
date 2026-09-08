@@ -31,7 +31,7 @@ For *how to use this harness as a prompt-engineering development loop* (gold tra
 Three things are load-bearing across the seam:
 
 1. **The flowstore compiler** produces a stable `{system_prompt, tool_schemas}` JSON. Your script drives any LLM with that. (In `scripts/_agent.py` it's invoked via the `FLOWSTORE_COMPILE_CMD` override — see [§ Compiling](#compiling-the-spec).)
-2. **Test cases** (`tests/cases/*.test.json`) define what to run: one actor (scripted `user_turns`, a referenced `persona_id`, or an inline `system_prompt`) plus the **situational fixture** for the scenario (`vars` + per-capability `mocks`). **Personas** (`tests/personas/*.persona.json`) are reusable *actors*: a required `system_prompt` driving an LLM-as-user, plus the **character-intrinsic** fixture. A persona-bound case resolves to `persona ∪ case` — `vars` merge per key, `mocks` replace per capability id, the case always winning.
+2. **Test cases** (`tests/cases/*.md`) define what to run: one actor (scripted `user_turns`, a referenced `persona_id`, or an inline `system_prompt`) plus the **situational fixture** for the scenario (`vars` + per-capability `mocks`). **Personas** (`tests/personas/*.persona.json`) are reusable *actors*: a required `system_prompt` driving an LLM-as-user, plus the **character-intrinsic** fixture. A persona-bound case resolves to `persona ∪ case` — `vars` merge per key, `mocks` replace per capability id, the case always winning.
 3. **Result files** (`tests/runs/<timestamp>-<label>/*.result.json`) are what your script writes. The shape is contract.
 
 Everything else (the evaluator set, multi-trial aggregation, gold loading, endpoint mode) is yours to write however you want. The `scripts/` here are *one* shape; not *the* shape — the provider-specific surface is isolated to a small block in `scripts/_agent.py` so you can retarget another LLM.
@@ -97,7 +97,7 @@ Output of `--format prompt`:
 
 All carry a `$schema` URI and a stable `id`. flowstore validates these on load.
 
-### `tests/cases/<id>.test.json` — `flowstore://test/case/v0`
+### `tests/cases/<id>.md` — `flowstore://test/case/v0`
 
 One actor (scripted `user_turns`, a referenced `persona_id`, or an inline `system_prompt`) + the situational fixture (`vars` + `mocks`) + which evaluators to run + (optionally) which gold to compare against. The fnol cases live in `tests/cases/`; `happy-claim-filed.test.json` is the fullest one.
 
@@ -148,22 +148,22 @@ Fields:
 - **`transcript_assertions`** — checks over the whole agent text. Four `kind`s, all implemented in `scripts/run_scripted.py`: `substring` (pattern present, or `must_appear: false` to forbid), `regex` (regex match, `must_appear` toggles), `count` (case-insensitive substring count within `min_occurrences` / `max_occurrences`), and `must_terminate_within` (dialogue ends within `max_turns` agent turns).
 - **`state_assertions`** — checks against `final_variables` (`equals` / `matches` / `is_set`). **On the compiled-prompt target these report "needs a native runner"**, because the harness doesn't track a variable bag — see [§ State assertions](#state-assertions-and-the-runner-boundary).
 - **`capability_assertions`** — deterministic checks over `result.capability_calls[]`: `{ "capability": "<id>", "invoked": true|false }`. A green means the agent did (or didn't) fire that capability. Unlike `state_assertions`, these evaluate on **both** the compiled-prompt and runner targets — the prompt harness dispatches mocks itself and records the calls — so they're the load-bearing way to pin "filed the claim" / "transferred to a human" / "did NOT file mid-emergency" without fishing for a mock's return value in the agent's prose. `capability` is the capability **id**, not the runtime tool name; `invoked` defaults to `true`.
-- **`evaluators`** — names. Each resolves to a rubric (`tests/rubrics/<name>.rubric.json`, an LLM judge) if one exists, else a Python evaluator (`tests/evaluators/<name>.py`). This repo ships both — see [§ Evaluators](#evaluators).
-- **`persona_id`** — the referenced-persona actor (`tests/personas/<persona_id>.persona.json`), whose `system_prompt` drives a simulated caller and whose intrinsic fixture this case inherits (`persona ∪ case`). `persona-panicking` / `persona-impatient-human` / `persona-redteam-fault` are the examples. Mutually exclusive with `user_turns` / `system_prompt`.
+- **`evaluators`** — names. Each resolves to a rubric (`tests/rubrics/<name>.md`, an LLM judge) if one exists, else a Python evaluator (`tests/evaluators/<name>.py`). This repo ships both — see [§ Evaluators](#evaluators).
+- **`persona_id`** — the referenced-persona actor (`tests/personas/<persona_id>.md`), whose `system_prompt` drives a simulated caller and whose intrinsic fixture this case inherits (`persona ∪ case`). `persona-panicking` / `persona-impatient-human` / `persona-redteam-fault` are the examples. Mutually exclusive with `user_turns` / `system_prompt`.
 - **`system_prompt`** — the inline-actor alternative to `persona_id`: a one-off simulated-user prompt for a case that doesn't warrant a reusable persona file. Mutually exclusive with `user_turns` / `persona_id`.
 - **`vars`** — situational `{name: value}` context vars for this scenario, coerced against `variables.yaml`. Merged over the bound persona's intrinsic `vars` (case wins per key) and forwarded to the compiler's `--vars-file` as pre-context.
 - **`mocks`** — situational `{capability_id: behavior}` for this scenario. Merged over the persona's intrinsic `mocks`, **replacing** per capability id (case wins). A scripted/inline case carries its whole mock set here. Behavior shape is the embedded mock-behavior union — `{ "kind": "static", "returns": {...} }` or `{ "kind": "error", "error": "..." }`.
-- **`gold_id`** — optional. Names a `tests/gold/<gold_id>.gold.json`; the harness loads it and passes it to the rubric judge as `{gold_standard}` (so `claim_filed_correctly` can compare against the reference transcript).
-- **`model`** — optional. Pins the case to a model id; falls back to `models/defaults.json` `default` (`gemini-2.5-flash`).
+- **`gold_id`** — optional. Names a `tests/gold/<gold_id>.md`; the harness loads it and passes it to the rubric judge as `{gold_standard}` (so `claim_filed_correctly` can compare against the reference transcript).
+- **`model`** — optional. Pins the case to a model id; falls back to `models/models.yaml` `default` (`gemini-2.5-flash`).
 - **`language`** — language code (`en-US` / `es-US`). Forwarded to the compiler's `--language`. **Required when you want the non-default language** — the spec declares two, and the compiler picks the first (en-US) unless told otherwise, so a Spanish case (`es-happy-claim`, `language: "es-US"`) must set it or its Spanish assertions silently fail against an English prompt.
 - **`max_turns`** — optional, for simulated-user runs: the cap on agent turns (`run_persona.py` default 12).
 - **`tags`** — optional free-form labels for suite filtering. Colon-prefixed namespaces are the provenance convention (`src:gold:<id>`, `src:session:<id>`, `src:authored`); bare tags are routing buckets (`happy`, `pre-context`, …).
 
 Pre-context (a caller already identified before the call) is just a case with a `vars` block: `happy-known-caller` carries `caller_name` / `policy_number` / `now` inline, which seed into the compiled prompt.
 
-The file's `id` should match the basename (`happy-claim-filed.test.json` → `id: "happy-claim-filed"`).
+The file's `id` should match the basename (`happy-claim-filed.md` → `id: "happy-claim-filed"`).
 
-### `tests/personas/<id>.persona.json` — `flowstore://test/persona/v0`
+### `tests/personas/<id>.md` — `flowstore://test/persona/v0`
 
 A persona is a reusable **actor**: a required `system_prompt` that `run_persona.py` runs as a simulated caller, plus the **character-intrinsic** fixture — the `vars` and `mocks` true of this character in every test (their identity, the `verify_policy` return keyed on it). Situational fixture lives on the case; a persona-bound case resolves to `persona ∪ case`.
 
@@ -186,9 +186,9 @@ Only the intrinsic fixture lives here: the `verify_policy` return names **Jordan
 - **`system_prompt`** — **required**; the actor's voice. `run_persona.py` runs it as the system instruction for a Gemini "user" that converses with the compiled agent, alternating up to `case.max_turns` agent turns.
 - **`vars`** — character-intrinsic `{name: value}` dict, coerced against `variables.yaml`. Merged under the case's `vars` at run time and forwarded to the compiler's `--vars-file` (`scripts/_agent.py` `resolve_fixture` → `vars_to_tempfile`). Situational vars go on the case.
 - **`mocks`** — character-intrinsic `{capability_id: behavior}` (e.g. the identity-keyed `verify_policy` return). Each behavior is the embedded mock-behavior union: `{ "kind": "static", "returns": {...} }` returns its object verbatim every call, and `{ "kind": "error", "error": "..." }` hands the LLM the error string so the agent has to recover. A case's mock **replaces** the persona's for the same capability id. Capabilities with no mock yield a soft error into the transcript (see [§ Mock dispatch](#mock-dispatch-contract)).
-- **`model`** — optional; falls back to `models/defaults.json` `roles.user_simulation`.
+- **`model`** — optional; falls back to `models/models.yaml` `roles.user_simulation`.
 
-### `tests/rubrics/<id>.rubric.json` — `flowstore://test/rubric/v0`
+### `tests/rubrics/<id>.md` — `flowstore://test/rubric/v0`
 
 Declarative LLM-judge criterion. `scripts/_judge.py` renders `prompt_template` (substituting `{criteria}`, `{transcript}`, `{scale.min}`, `{scale.max}`, and `{gold_standard}` when a `gold_id` was loaded), asks the judge model for a JSON `{score, notes}`, and reads back a score in `scale.min..scale.max`. `passed` is `score >= midpoint`.
 
@@ -267,7 +267,7 @@ Three entry points in `scripts/`, each taking a positional test-file path plus t
 ### `run_scripted.py`
 
 ```bash
-python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json --label flowstore
+python scripts/run_scripted.py tests/cases/happy-claim-filed.md --label flowstore
 ```
 
 Resolves the fixture (`persona ∪ case`, `scripts/_agent.py` `resolve_fixture`), compiles the prompt (seeding the fixture's `vars` as pre-context), builds the mock dispatcher from the fixture's `mocks` (`scripts/_agent.py` `make_dispatcher`), drives the conversation (`scripts/_agent.py` `Conversation`), then evaluates per-turn `assertions`, `transcript_assertions`, `state_assertions`, `capability_assertions`, and named `evaluators`, writing one `result.json`. Flags: `--label`, `--language`, `--system-prompt`, `--vars-file`. There is **no `--trials`** here — scripted cases run once per invocation; re-run by hand if you want repeated samples.
@@ -275,7 +275,7 @@ Resolves the fixture (`persona ∪ case`, `scripts/_agent.py` `resolve_fixture`)
 ### `run_persona.py`
 
 ```bash
-python scripts/run_persona.py tests/cases/persona-panicking.test.json --trials 3 --label persona
+python scripts/run_persona.py tests/cases/persona-panicking.md --trials 3 --label persona
 ```
 
 Requires a `persona_id` on the case. Runs a two-LLM conversation up to `case.max_turns` agent turns, then runs the case's `evaluators` (rubrics over the full transcript). `--trials N` runs N fresh conversations and records each under `result["trials"][]`. This is the runner where non-determinism actually bites (the simulated caller improvises), so it's the one with a trial flag.
@@ -283,7 +283,7 @@ Requires a `persona_id` on the case. Runs a two-LLM conversation up to `case.max
 ### `run_decision.py`
 
 ```bash
-python scripts/run_decision.py tests/decisions/safety-triage-routing.decision.json
+python scripts/run_decision.py tests/decisions/safety-triage-routing.yaml
 ```
 
 See [§ Decision tests](#decision-tests). No `--trials`.
@@ -340,10 +340,10 @@ A common need during migration: run the same cases against the flowstore-compile
 
 ```bash
 # A: flowstore-compiled prompt
-python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json --label flowstore
+python scripts/run_scripted.py tests/cases/happy-claim-filed.md --label flowstore
 
 # B: same case, hand-authored prompt
-python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json \
+python scripts/run_scripted.py tests/cases/happy-claim-filed.md \
   --system-prompt /path/to/existing-prompt.txt --label handauth
 ```
 
@@ -353,7 +353,7 @@ Then diff `tests/runs/<ts>-flowstore/happy-claim-filed.result.json` against `tes
 
 ## Decision tests
 
-A decision test (`tests/decisions/<id>.decision.json`, `flowstore://test/decision-test/v0`) pins a conversational prefix and fans out a set of branch inputs to probe a single routing decision. `run_decision.py` replays the `prefix_turns` into a **fresh** conversation per branch, sends the branch's `user_input`, and checks the agent's immediate reply against the branch's `must_contain` / `must_not_contain` and (when the routing exit fires a tool) its `capability_assertions`.
+A decision test (`tests/decisions/<id>.yaml`, `flowstore://test/decision-test/v0`) pins a conversational prefix and fans out a set of branch inputs to probe a single routing decision. `run_decision.py` replays the `prefix_turns` into a **fresh** conversation per branch, sends the branch's `user_input`, and checks the agent's immediate reply against the branch's `must_contain` / `must_not_contain` and (when the routing exit fires a tool) its `capability_assertions`.
 
 ```json
 {
@@ -381,7 +381,7 @@ This repo ships both kinds, unlike a bare-bones harness:
 - **Six deterministic Python evaluators** in `tests/evaluators/` — `forbidden_phrases`, `required_phrases`, `max_turn_length`, `regex_match`, `state_check`, `tool_calls_check`. They're vendored built-ins, generic but with sensible fnol defaults (e.g. `forbidden_phrases` ships a default list of fault/premium phrases the agent must never say). A real project edits them.
 - **Five LLM-judge rubrics** in `tests/rubrics/` — listed above.
 
-Resolution (in `scripts/_eval.py`, `run_named_evaluator`): a name in `evaluators[]` resolves to `tests/rubrics/<name>.rubric.json` if that file exists (LLM judge via `scripts/_judge.py`), else `tests/evaluators/<name>.py` (a module exposing `evaluate(result, spec=None) -> {name, passed, notes}`), else a not-passed result noting neither was found. Python evaluators receive the compiled spec (from `--format spec`) so spec-aware ones like `tool_calls_check` can validate calls against the declared capabilities. Add your own by dropping a file into either directory; the name in the case picks it up.
+Resolution (in `scripts/_eval.py`, `run_named_evaluator`): a name in `evaluators[]` resolves to `tests/rubrics/<name>.md` if that file exists (LLM judge via `scripts/_judge.py`), else `tests/evaluators/<name>.py` (a module exposing `evaluate(result, spec=None) -> {name, passed, notes}`), else a not-passed result noting neither was found. Python evaluators receive the compiled spec (from `--format spec`) so spec-aware ones like `tool_calls_check` can validate calls against the declared capabilities. Add your own by dropping a file into either directory; the name in the case picks it up.
 
 ---
 

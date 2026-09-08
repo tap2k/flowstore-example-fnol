@@ -1,0 +1,4 @@
+default: gemini-2.5-flash
+roles:
+  judge: gemini-2.5-flash
+  user_simulation: gemini-2.5-flash

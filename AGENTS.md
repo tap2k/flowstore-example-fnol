@@ -40,7 +40,7 @@ fnol/
 ├── knowledge/                     faq.md, glossary.md, tables/tbl_claim_types.md
 ├── flows/<id>.md                  16 flows — all five types; routing in frontmatter, prose + scripts in the body
 ├── comments/                      anchored review threads
-├── models/defaults.json           default + judge/user-sim roles
+├── models/models.yaml           default + judge/user-sim roles
 ├── prompts/                       GOLD-EXTRACTION-PROMPT.txt
 ├── tests/                         cases (11), decisions (2), gold (3), personas (3),
 │                                  rubrics (5), evaluators (6), runs
@@ -83,7 +83,7 @@ For batch/CI runs, the Python harness compiles via the `flowstore-compile` CLI, 
 
 The model this repo uses:
 
-- **Fixture is scoped across persona ∪ case.** A test case names one actor — scripted `user_turns`, a referenced `persona_id`, or an inline `system_prompt` — plus the **situational** fixture (`vars` + per-capability `mocks`) for its scenario. A `tests/personas/<id>.persona.json` is a reusable actor: a required `system_prompt` plus the **character-intrinsic** fixture. A persona-bound case resolves to `persona ∪ case` (vars merge per key, mocks replace per capability id, case wins). Mock behaviors are `{ "kind": "static", "returns": {…} }` or `{ "kind": "error", "error": "…" }`; there is no standalone mock file.
+- **Fixture is scoped across persona ∪ case.** A test case names one actor — scripted `user_turns`, a referenced `persona_id`, or an inline `system_prompt` — plus the **situational** fixture (`vars` + per-capability `mocks`) for its scenario. A `tests/personas/<id>.md` is a reusable actor: a required `system_prompt` plus the **character-intrinsic** fixture. A persona-bound case resolves to `persona ∪ case` (vars merge per key, mocks replace per capability id, case wins). Mock behaviors are `{ "kind": "static", "returns": {…} }` or `{ "kind": "error", "error": "…" }`; there is no standalone mock file.
 - **Assertions.** `assertions` (per-turn substrings), `transcript_assertions` (whole-transcript predicates), and `capability_assertions` (`{capability, invoked}`, deterministic over the recorded tool calls — the load-bearing way to pin "filed the claim" / "did NOT file mid-emergency").
 - **Targets.** The default compiled-prompt target is self-contained; a native flowstore **runner** target additionally tracks variable scope, fires exit actions, and executes `retrieve_on_turn` (so the retrieval capability evaluates there).
 - **The loop.** Capture/author a **gold** (`prompts/GOLD-EXTRACTION-PROMPT.txt`) → derive a **case** → compile → run → read the transcript and diagnose. The two docs above go deep on each step.
@@ -92,10 +92,10 @@ The model this repo uses:
 ```bash
 python3 -m venv .venv && ./.venv/bin/pip install -r scripts/requirements.txt
 cp .env.example .env   # then fill in GOOGLE_API_KEY + FLOWSTORE_COMPILE_CMD; the scripts auto-load it (python-dotenv)
-./.venv/bin/python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json
-./.venv/bin/python scripts/run_scripted.py tests/cases/barge-in-impatient.test.json --voice   # voice-sim + barge-in
-./.venv/bin/python scripts/run_decision.py tests/decisions/safety-triage-routing.decision.json
-./.venv/bin/python scripts/run_persona.py tests/cases/persona-panicking.test.json
+./.venv/bin/python scripts/run_scripted.py tests/cases/happy-claim-filed.md
+./.venv/bin/python scripts/run_scripted.py tests/cases/barge-in-impatient.md --voice   # voice-sim + barge-in
+./.venv/bin/python scripts/run_decision.py tests/decisions/safety-triage-routing.yaml
+./.venv/bin/python scripts/run_persona.py tests/cases/persona-panicking.md
 ./.venv/bin/python scripts/run_golds.py --all
 ./.venv/bin/python scripts/smoke.py   # no key: runners vs helper modules
 ```

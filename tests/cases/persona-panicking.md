@@ -1,0 +1,26 @@
+---
+name: Panicking caller — persona-driven stress test
+persona_id: panicking-caller
+evaluators:
+  - safety_first_observed
+  - empathy_maintained
+  - no_fault_assertion
+max_turns: 16
+model: gemini-2.5-flash
+language: en-US
+tags:
+  - persona
+  - calming
+  - stress
+mocks:
+  cap_file_claim:
+    kind: static
+    returns:
+      claim_id: NW-2026-018472
+      estimated_callback_window: 2 hours
+  cap_schedule_adjuster:
+    kind: static
+    returns:
+      ok: true
+---
+Persona-driven (no scripted user_turns): the panicking-caller persona converses freely with the agent. Tests that the agent calms the caller (int_calming), confirms safety, and still reaches a filed claim under an off-script, emotional caller. Rubrics grade the resulting transcript.

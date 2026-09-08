@@ -1,0 +1,81 @@
+---
+name: Safe caller files a rear-end collision claim and schedules a callback
+assertions:
+  - turn: 1
+    must_contain:
+      - safe
+    must_not_contain:
+      - policy number
+      - what happened
+transcript_assertions:
+  - kind: regex
+    pattern: \{[a-zA-Z_][a-zA-Z0-9_]*\}
+    must_appear: false
+  - kind: substring
+    pattern: NW-2026-018472
+    must_appear: true
+  - kind: substring
+    pattern: adjuster
+    must_appear: true
+  - kind: count
+    pattern: "911"
+    max_occurrences: 0
+capability_assertions:
+  - capability: cap_verify_policy
+    invoked: true
+  - capability: cap_file_claim
+    invoked: true
+  - capability: cap_schedule_adjuster
+    invoked: true
+evaluators:
+  - regex_match
+  - tool_calls_check
+  - max_turn_length
+  - safety_first_observed
+  - no_premium_speculation
+  - claim_filed_correctly
+model: gemini-2.5-flash
+language: en-US
+tags:
+  - happy
+  - claim-filed
+mocks:
+  cap_verify_policy:
+    kind: static
+    returns:
+      policy_active: true
+      deductible_amount: 500
+      named_drivers: Jordan Reese
+  cap_file_claim:
+    kind: static
+    returns:
+      claim_id: NW-2026-018472
+      estimated_callback_window: 2 hours
+  cap_schedule_adjuster:
+    kind: static
+    returns:
+      ok: true
+---
+Full happy path: safety confirmed -> identify (verify_policy active) -> incident -> vehicle -> other party -> photos -> review -> file_claim (success) -> schedule_adjuster. Exercises every assertion type (capability_assertions assert the three capabilities fired; the NW-2026-018472 substring now checks the agent relayed the real claim id, not that the call happened) plus a Python evaluator and gold-compared rubric.
+
+## Turns
+
+- Yeah, everyone's fine. I'm pulled over on the shoulder.
+
+- Jordan Reese, policy seven seven four two one zero nine.
+
+- That's it.
+
+- About twenty minutes ago someone rear-ended me at the light on Oak and 3rd. I think it was their fault but I'm not totally sure.
+
+- No police. The other driver's name is Sam Avery, I've got their number but not their insurance.
+
+- Rear bumper's crunched but it still drives.
+
+- Yeah, I can send photos.
+
+- Yes, that's right.
+
+- This number's fine, five five five one two one two.
+
+- As soon as possible.

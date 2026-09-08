@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Drive a persona test: a simulated user (LLM) talks to the compiled agent (LLM).
 
-A persona case (tests/cases/<id>.test.json with persona_id and no user_turns)
-references a persona (tests/personas/<persona_id>.persona.json) whose
+A persona case (tests/cases/<id>.md with persona_id and no user_turns)
+references a persona (tests/personas/<persona_id>.md) whose
 system_prompt drives a Gemini "user". The compiled prompt drives the agent.
 
 The agent speaks first (chatbot_initiates); the persona then replies to each
@@ -13,7 +13,7 @@ case.evaluators[] (rubrics judged over the full transcript; python evaluators to
 evaluator_results are recorded under result["trials"][] and the top-level
 transcript/evaluator_results hold the last trial.
 
-  python scripts/run_persona.py tests/cases/<id>.test.json [--label L]
+  python scripts/run_persona.py tests/cases/<id>.md [--label L]
       [--trials N] [--language es-US] [--system-prompt PATH] [--vars-file PATH]
 """
 
@@ -137,7 +137,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Run an fnol persona test.")
     parser.add_argument("--thinking", action="store_true",
                         help="Enable Gemini Flash thinking for the agent (default: off).")
-    parser.add_argument("case", help="path to tests/cases/<id>.test.json (with persona_id)")
+    parser.add_argument("case", help="path to tests/cases/<id>.md (with persona_id)")
     parser.add_argument("--label", default="manual")
     parser.add_argument("--trials", type=int, default=1)
     parser.add_argument("--language", default=None, help="override case.language")
@@ -155,8 +155,9 @@ def main(argv=None):
                        load_json, run_named_evaluator)
 
     case_path = Path(args.case).resolve()
-    case = load_json(case_path)
     project_dir = resolve_paths(case_path)
+    from _artifacts import load_case
+    case = load_case(project_dir, case_path)
 
     # Simulated-user actor: a referenced persona (persona_id) or an inline
     # one-off prompt (system_prompt). Scripted cases go through run_scripted.py.

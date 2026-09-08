@@ -1,7 +1,7 @@
 """Shared evaluator-name resolution used by the scripted and persona runners.
 
 A named evaluator in a test case resolves like this:
-  1. tests/rubrics/<name>.rubric.json exists  -> LLM judge (via _judge.judge_one)
+  1. tests/rubrics/<name>.md exists  -> LLM judge (via _judge.judge_one)
   2. tests/evaluators/<name>.py exists         -> import it, call evaluate(result, spec)
   3. neither                                   -> a not-passed result with a note
 
@@ -83,12 +83,12 @@ def run_named_evaluator(name, *, project_dir, result, compiled_spec,
     project_dir = Path(project_dir)
     tests = _tests_dir(project_dir)
 
-    rubric_path = tests / "rubrics" / f"{name}.rubric.json"
     py_path = tests / "evaluators" / f"{name}.py"
 
-    if rubric_path.is_file():
+    from _artifacts import load_rubric
+    rubric = load_rubric(project_dir, name)
+    if rubric is not None:
         from _judge import format_gold, judge_one  # local import keeps SDK lazy
-        rubric = load_json(rubric_path)
         return judge_one(rubric, result.get("transcript", []), judge_client, judge_model,
                          gold_text=format_gold(gold) if gold else None)
 
@@ -102,5 +102,5 @@ def run_named_evaluator(name, *, project_dir, result, compiled_spec,
         return out
 
     return {"name": name, "passed": False,
-            "notes": f"no rubric ({rubric_path.name}) or python evaluator "
+            "notes": f"no rubric (tests/rubrics/{name}.md) or python evaluator "
                      f"({py_path.name}) found for '{name}'"}

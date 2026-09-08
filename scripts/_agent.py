@@ -44,7 +44,7 @@ from google.genai import types
 # bound into the compiled prompt / sent as context_vars (see provided_vars);
 # decision tests carry `state` instead, injected wholesale (snapshot semantics):
 #
-#   * A PERSONA is a reusable ACTOR (tests/personas/<id>.persona.json): a
+#   * A PERSONA is a reusable ACTOR (tests/personas/<id>.md): a
 #     REQUIRED system_prompt plus only CHARACTER-INTRINSIC fixture — identity
 #     `vars` (who the contact is) and identity-keyed `mocks` (a verify/lookup
 #     whose return names that contact).
@@ -58,14 +58,10 @@ from google.genai import types
 
 
 def load_persona(project: Path, persona_id: str | None) -> dict[str, Any] | None:
-    """Load tests/personas/<persona_id>.persona.json, or None when persona_id
-    is falsy. Raises FileNotFoundError if a named persona doesn't exist."""
-    if not persona_id:
-        return None
-    path = Path(project) / "tests" / "personas" / f"{persona_id}.persona.json"
-    if not path.exists():
-        raise FileNotFoundError(f"persona not found: {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    """The persona with that id (tests/personas/<id>.md), or None when
+    persona_id is falsy. Raises FileNotFoundError if it doesn't exist."""
+    from _artifacts import load_persona as _load
+    return _load(project, persona_id)
 
 
 def resolve_fixture(persona: dict[str, Any] | None,
@@ -779,15 +775,7 @@ def resolve_paths(tests_file):
 
 
 def default_model(project_dir, role=None):
-    """Resolve the model id for a role from models/defaults.json.
-
-    role None -> the project default; otherwise roles[role] falling back to the
-    default. Returns "gemini-2.5-flash" if no defaults file exists.
-    """
-    path = Path(project_dir) / "models" / "defaults.json"
-    if not path.is_file():
-        return "gemini-2.5-flash"
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if role:
-        return data.get("roles", {}).get(role) or data.get("default") or "gemini-2.5-flash"
-    return data.get("default") or "gemini-2.5-flash"
+    """Model id for a role from models/models.yaml: the project default when
+    the role is unset, gemini-2.5-flash when the project declares none."""
+    from _artifacts import default_model as _default
+    return _default(project_dir, role)

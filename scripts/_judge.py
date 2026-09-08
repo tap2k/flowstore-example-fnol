@@ -34,19 +34,18 @@ _MIN_TURNS_FOR_JUDGING = 5  # below this, conversation likely never reached subs
 
 
 def load_rubric(project: Path, name: str) -> dict[str, Any]:
-    """Resolve `name` -> tests/rubrics/<name>.rubric.json. Raises if missing."""
-    rpath = project / "tests" / "rubrics" / f"{name}.rubric.json"
-    if not rpath.exists():
-        raise FileNotFoundError(f"rubric not found: {rpath}")
-    return json.loads(rpath.read_text())
+    """Resolve `name` -> tests/rubrics/<name>.md. Raises if missing."""
+    from _artifacts import load_rubric as _load
+    r = _load(project, name)
+    if r is None:
+        raise FileNotFoundError(f"rubric not found: {project}/tests/rubrics/{name}.md")
+    return r
 
 
 def load_gold(project: Path, gold_id: str) -> dict[str, Any] | None:
-    """Resolve `gold_id` -> tests/gold/<gold_id>.gold.json. Returns None if missing."""
-    gpath = project / "tests" / "gold" / f"{gold_id}.gold.json"
-    if not gpath.exists():
-        return None
-    return json.loads(gpath.read_text())
+    """Resolve `gold_id` -> tests/gold/<gold_id>.md. Returns None if missing."""
+    from _artifacts import load_gold as _load
+    return _load(project, gold_id)
 
 
 def format_transcript(transcript: list[dict[str, Any]]) -> str:

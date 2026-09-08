@@ -144,7 +144,7 @@ fnol/
 │   └── <id>.md                    16 flows — all five types; routing in frontmatter,
 │                                  instructions + en-US / es-US scripts in the body
 ├── comments/                      anchored review threads (flow + exit_path)
-├── models/defaults.json           default + judge/user-sim roles (Gemini)
+├── models/models.yaml           default + judge/user-sim roles (Gemini)
 ├── tests/
 │   ├── cases/                     11 test cases (scripted + persona-driven)
 │   ├── decisions/                 2 decision tests (routing matrices)
@@ -206,7 +206,7 @@ Every file is validated on load; ids are explicit (filenames, `### id` headings,
 | `capability_assertions` (`invoked` true/false) | `happy-claim-filed`; decision branches in `policy-not-found-routing` |
 | Gold standard + `gold_id` | `tests/gold/*` ← `happy-claim-filed`, `emergency-defer`, `policy-not-found-retry` |
 | Situational fixture (`vars` + `mocks` on the case) | `happy-claim-filed`, `filing-system-error`, … |
-| Intrinsic fixture on a persona (`persona ∪ case` merge) | `persona-panicking` ← `tests/personas/panicking-caller.persona.json` |
+| Intrinsic fixture on a persona (`persona ∪ case` merge) | `persona-panicking` ← `tests/personas/panicking-caller.md` |
 | Case `vars` (pre-populated context) | `happy-known-caller` |
 | Persona-driven case (LLM-as-user `system_prompt`) | `tests/cases/persona-*` ← `tests/personas/{panicking-caller,impatient-wants-human,redteam-fault-fishing}` |
 | Decision test (routing matrix) | `tests/decisions/*` |
@@ -234,7 +234,7 @@ That's the whole compile-and-test loop, no checkout required. (The Python harnes
 `scripts/` automates the same compile for batch/CI runs — see [Run the tests](#run-the-tests).)
 
 `prompts/GOLD-EXTRACTION-PROMPT.txt` is the authoring prompt for turning real source
-material (call transcripts, scripts, docs) into the `tests/gold/*.gold.json` records here.
+material (call transcripts, scripts, docs) into the `tests/gold/*.md` records here.
 
 ---
 
@@ -252,13 +252,13 @@ python3 -m venv .venv && ./.venv/bin/pip install -r scripts/requirements.txt
 cp .env.example .env   # then fill in GOOGLE_API_KEY (or GEMINI_API_KEY) + FLOWSTORE_COMPILE_CMD; the scripts auto-load it (python-dotenv)
 
 # Scripted case (user_turns + assertions + persona world + rubrics + gold compare)
-./.venv/bin/python scripts/run_scripted.py tests/cases/happy-claim-filed.test.json
+./.venv/bin/python scripts/run_scripted.py tests/cases/happy-claim-filed.md
 
 # Decision test (pin a point, fan out branch inputs)
-./.venv/bin/python scripts/run_decision.py tests/decisions/safety-triage-routing.decision.json
+./.venv/bin/python scripts/run_decision.py tests/decisions/safety-triage-routing.yaml
 
 # Persona-driven case (two-LLM conversation + rubric judging)
-./.venv/bin/python scripts/run_persona.py tests/cases/persona-panicking.test.json
+./.venv/bin/python scripts/run_persona.py tests/cases/persona-panicking.md
 
 # Gold replay (feed the gold's user turns, judge whether the outcome matches)
 ./.venv/bin/python scripts/run_golds.py --all
@@ -302,7 +302,7 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
   Outbound agents lean on it far more.
 - **Evaluators are vendored built-ins you customize.** The six `tests/evaluators/*.py` are
   generic + spec-aware with sensible fnol defaults; a real project edits them. A test case's
-  `evaluators[]` name resolves to a rubric (`tests/rubrics/<name>.rubric.json`) if one exists,
+  `evaluators[]` name resolves to a rubric (`tests/rubrics/<name>.md`) if one exists,
   else a Python evaluator (`tests/evaluators/<name>.py`).
 
 ---
@@ -312,7 +312,7 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
 - [`AGENTS.md`](AGENTS.md) — the working guide for this repo: orientation, the flowstore model, how to author the spec, a testing overview, and conventions. Start here if you're (human or agent) about to change the spec.
 - [`docs/testing-from-scripts.md`](docs/testing-from-scripts.md) — the bring-your-own-script testing path in depth (file shapes, the run loop, mock dispatch).
 - [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — authoring agent prompts test-first.
-- [`prompts/GOLD-EXTRACTION-PROMPT.txt`](prompts/GOLD-EXTRACTION-PROMPT.txt) — the LLM prompt that turns source material (transcripts, scripts, docs) into `tests/gold/*.gold.json` records.
+- [`prompts/GOLD-EXTRACTION-PROMPT.txt`](prompts/GOLD-EXTRACTION-PROMPT.txt) — the LLM prompt that turns source material (transcripts, scripts, docs) into `tests/gold/*.md` records.
 
 **New to flowstore?** It's a behavioral spec format for conversational agents — a graph of *flows* connected by *exit paths*, decomposed into per-concern files in a Git repo (what you see here). The authoritative spec data model is [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md) and the on-disk layout is [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md) in the public flowstore repo; this project is a worked instance of both.
 

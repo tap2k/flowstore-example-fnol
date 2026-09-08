@@ -1,0 +1,55 @@
+---
+name: Character-sheet vars ground the mocks (caller states identity live)
+transcript_assertions:
+  - kind: regex
+    pattern: \{[a-zA-Z_][a-zA-Z0-9_]*\}
+    must_appear: false
+evaluators:
+  - safety_first_observed
+  - tool_calls_check
+model: gemini-2.5-flash
+language: en-US
+tags:
+  - happy
+  - character-sheet
+  - single-vehicle
+vars:
+  caller_name: Jordan Reese
+  policy_number: "7742109"
+  now: 2026-05-27
+mocks:
+  cap_verify_policy:
+    kind: static
+    returns:
+      policy_active: true
+      deductible_amount: 500
+      named_drivers: Jordan Reese
+  cap_file_claim:
+    kind: static
+    returns:
+      claim_id: NW-2026-018472
+      estimated_callback_window: 2 hours
+  cap_schedule_adjuster:
+    kind: static
+    returns:
+      ok: true
+---
+Demonstrates the character sheet: vars (caller_name, policy_number) are edit-time ground truth that keeps the mocks consistent with the caller's identity (cap_verify_policy returns named_drivers naming the same person) — they do NOT reach the agent. Only `now` is declared provided in variables.json (the session clock), so the agent must elicit name and policy in conversation, which the turns do. For agents whose deployment genuinely knows the caller at session start (outbound dialers, screen-pop transfers), mark those variables `provided: true` on the declaration instead — see SCHEMA.md § Variables → provided.
+
+## Turns
+
+- Yeah, everyone's okay, I'm safe.
+
+- Jordan Reese, policy seven seven four two one zero nine.
+
+- Backed into a pole in a parking lot this morning, just me, no police.
+
+- Rear bumper, but it drives fine.
+
+- No other car involved.
+
+- Sure, I'll send photos.
+
+- Yes, that's right.
+
+- Five five five one two one two, as soon as possible.

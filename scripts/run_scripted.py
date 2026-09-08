@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Drive a scripted test case (fixed user turns) against the compiled fnol agent.
 
-A scripted case (tests/cases/<id>.test.json, flowstore://test/case/v0) lists
+A scripted case (tests/cases/<id>.md, flowstore://test/case/v0) lists
 user_turns the harness feeds verbatim. The agent speaks first (chatbot_initiates),
 then we alternate: user_turn -> agent_reply, until the turns run out. We then run:
   (a) per-turn assertions[]          (turn = 1-indexed into the AGENT-only subsequence)
@@ -16,7 +16,7 @@ Results are written to tests/runs/<UTCstamp>-<label>/<case_id>.result.json
 The default target is the self-contained compiled-prompt path driven by Gemini.
 A deployed flowstore runner could be wired in as an alternative target.
 
-  python scripts/run_scripted.py tests/cases/<id>.test.json [--label L]
+  python scripts/run_scripted.py tests/cases/<id>.md [--label L]
       [--language es-US] [--system-prompt PATH] [--vars-file PATH]
 """
 
@@ -193,7 +193,7 @@ def write_result(project_dir, label, case_id, result):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Run a scripted fnol test case.")
-    parser.add_argument("case", help="path to tests/cases/<id>.test.json")
+    parser.add_argument("case", help="path to tests/cases/<id>.md (or a bare case id)")
     parser.add_argument("--label", default="manual", help="run label (dir suffix)")
     parser.add_argument("--language", default=None, help="override case.language")
     parser.add_argument("--system-prompt", default=None,
@@ -224,8 +224,9 @@ def main(argv=None):
     import _persona
 
     case_path = Path(args.case).resolve()
-    case = load_json(case_path)
     project_dir = resolve_paths(case_path)
+    from _artifacts import load_case
+    case = load_case(project_dir, case_path)
 
     # Voice-realism defaults to the agent's declared modality; --voice/--no-voice overrides.
     from _compile import load_agent

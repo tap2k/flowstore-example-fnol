@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Drive a decision test: many branches off a shared conversational prefix.
 
-A decision test (tests/decisions/<id>.decision.json,
+A decision test (tests/decisions/<id>.yaml,
 flowstore://test/decision-test/v0) gives a prefix_turns dialogue and a set of
 branches. For EACH branch we start a FRESH conversation, replay the prefix
 (the opening agent turn is implicit/auto via chatbot_initiates), send the
@@ -18,7 +18,7 @@ expected_class is recorded for information only.
 Output uses a decision-specific schema (flowstore://run/decision-result/v0) so
 that the extra "branches" array doesn't collide with ResultSchema's closed shape.
 
-  python scripts/run_decision.py tests/decisions/<id>.decision.json [--label L]
+  python scripts/run_decision.py tests/decisions/<id>.yaml [--label L]
       [--language es-US] [--system-prompt PATH] [--vars-file PATH]
 """
 
@@ -59,7 +59,7 @@ def eval_branch(reply, branch):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Run an fnol decision test.")
-    parser.add_argument("decision", help="path to tests/decisions/<id>.decision.json")
+    parser.add_argument("decision", help="path to tests/decisions/<id>.yaml")
     parser.add_argument("--label", default="manual")
     parser.add_argument("--language", default=None, help="override decision.language")
     parser.add_argument("--system-prompt", default=None,
@@ -76,8 +76,9 @@ def main(argv=None):
     from _eval import eval_capability_assertions, load_json
 
     dec_path = Path(args.decision).resolve()
-    dec = load_json(dec_path)
     project_dir = resolve_paths(dec_path)
+    from _artifacts import load_decision
+    dec = load_decision(project_dir, dec_path)
 
     language = args.language or dec.get("language")
     # Decision tests carry `state` + `mocks` inline — they have no actor (the
