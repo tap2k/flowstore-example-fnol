@@ -105,7 +105,7 @@ def eval_transcript_assertions(transcript, assertions):
         elif kind == "regex":
             pat = a.get("pattern", "")
             must_appear = a.get("must_appear", True)
-            present = re.search(pat, agent_text) is not None
+            present = re.search(pat, agent_text, re.IGNORECASE) is not None  # editor applies the i flag too
             passed = present if must_appear else not present
             results.append({"name": name, "passed": passed,
                             "notes": f"/{pat}/ present={present}, must_appear={must_appear}"})
