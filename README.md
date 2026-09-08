@@ -49,7 +49,7 @@ to this upstream repo — and is the quickest one-off look:
 3. Drag the project **folder** onto the drop zone, or click **Choose folder…** and pick it.
    Drop the *folder*, not a GitHub `.zip` — the editor's ZIP import expects a flat,
    editor-exported zip, not GitHub's wrapped one. The loader reads only the canonical
-   flowstore files and ignores `scripts/`, `docs/`, `.venv/`, `.git/`, and the rest.
+   flowstore files and ignores `scripts/`, `tests/`, `.venv/`, `.git/`, and the rest.
 
 Either way, all 16 flows land on the canvas, validated on load.
 
@@ -146,14 +146,17 @@ fnol/
 ├── comments/                      anchored review threads (flow + exit_path)
 ├── models/defaults.json           default + judge/user-sim roles (Gemini)
 ├── tests/
-│   ├── cases/                     10 test cases (scripted + persona-driven)
+│   ├── cases/                     11 test cases (scripted + persona-driven)
 │   ├── decisions/                 2 decision tests (routing matrices)
 │   ├── gold/                      3 gold-standard transcripts
-│   ├── personas/                  10 personas — each owns its world (vars + mocks);
-│   │                              3 also carry a system_prompt (LLM-as-user)
+│   ├── personas/                  3 personas — each owns its world (vars + mocks)
+│   │                              and a system_prompt (LLM-as-user)
 │   ├── rubrics/                   5 LLM-judge rubrics
-│   └── evaluators/                6 deterministic Python evaluators (vendored built-ins)
+│   └── evaluators/                5 deterministic Python evaluators (vendored built-ins)
 └── scripts/                       self-contained test harness (Gemini; swappable)
+    ├── run_scripted.py  run_persona.py  run_decision.py  run_golds.py
+    ├── _agent.py (Conversation driver + mocks)  _compile.py  _eval.py  _judge.py  _persona.py
+    └── smoke.py                   static check that the runners and helpers agree
 ```
 
 Every `.json` carries a `$schema` URI and is validated on load.
@@ -200,7 +203,6 @@ Every `.json` carries a `$schema` URI and is validated on load.
 |---|---|
 | Scripted case + per-turn `assertions` | `tests/cases/happy-claim-filed`, `emergency-defer` |
 | `transcript_assertions` (substring/regex/count/terminate) | most cases |
-| `state_assertions` (final variable scope) | `happy-claim-filed` (runtime-only — see notes) |
 | `capability_assertions` (`invoked` true/false) | `happy-claim-filed`; decision branches in `policy-not-found-routing` |
 | Gold standard + `gold_id` | `tests/gold/*` ← `happy-claim-filed`, `emergency-defer`, `policy-not-found-retry` |
 | Situational fixture (`vars` + `mocks` on the case) | `happy-claim-filed`, `filing-system-error`, … |
@@ -241,8 +243,8 @@ material (call transcripts, scripts, docs) into the `tests/gold/*.gold.json` rec
 For batch/CI testing beyond interactive simulation, the Python harness drives the **compiled
 prompt** with Gemini. This path compiles via a local flowstore checkout — set
 `FLOWSTORE_COMPILE_CMD` to point at one (or use the published CLI once it ships); the editor's
-prompt mode above is the no-checkout alternative. Some spec features are runtime-only (variable
-scope, exit-path `actions`, `retrieve_on_turn`) and don't execute under this prompt-target
+prompt mode above is the no-checkout alternative. Some spec features are runtime-only (exit-path
+`actions`, `retrieve_on_turn`) and don't execute under this prompt-target
 setup; see Notes below.
 
 ```bash
@@ -257,13 +259,30 @@ cp .env.example .env   # then fill in GOOGLE_API_KEY (or GEMINI_API_KEY) + FLOWS
 
 # Persona-driven case (two-LLM conversation + rubric judging)
 ./.venv/bin/python scripts/run_persona.py tests/cases/persona-panicking.test.json
+
+# Gold replay (feed the gold's user turns, judge whether the outcome matches)
+./.venv/bin/python scripts/run_golds.py --all
+
+# No key needed: check the runners still agree with the helper modules
+./.venv/bin/python scripts/smoke.py
 ```
 
-> `state_assertions` (and the `state_check` evaluator) report "needs runtime variable scope"
-> here — the prompt-target harness doesn't track a variable bag (the LLM does it implicitly),
-> so `final_variables` stays empty. Exit-path `actions` and `retrieve_on_turn` are also
-> runtime-only; this target exercises conversational behavior and the capability *calls* the
-> model makes.
+What a healthy run looks like (Gemini 2.5 Flash, one trial; exact numbers drift with the model):
+
+| Command | Expected |
+|---|---|
+| `run_scripted happy-claim-filed` | 14 of 14 evaluators pass. |
+| `run_decision safety-triage-routing` | 4 of 4 branches pass. |
+| `run_persona persona-panicking` | 3 of 3 pass. |
+| `run_golds --all` | `emergency_defer` scores 5, `happy_claim_filed` around 3; `policy_not_found` scores low because the `max_turns` budget exit is runtime-only, so the prompt-mode agent keeps retrying instead of escalating. |
+
+All four runners share one driver, `Conversation` in `scripts/_agent.py`: it compiles the spec, hands
+Gemini the system prompt and tool schemas, dispatches every tool call to the fixture's mocks, and
+records the calls. `RunnerAgent` / `EndpointAgent` in the same file are alternative `--target`
+surfaces for `run_golds` (a live flowstore-runner, a deployed agent).
+
+> Exit-path `actions` and `retrieve_on_turn` are runtime-only; this target exercises
+> conversational behavior and the capability *calls* the model makes.
 
 Each run writes `tests/runs/<timestamp>-<label>/<id>.result.json` (`flowstore://run/result/v0`).
 Gemini is the default driver to match the rest of the repo; the file shapes are
@@ -277,9 +296,6 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
   and inject a *Retrieved context* block. The prompt-target harness doesn't do that, so
   `coverage-question-interrupt` answers from the FAQ alone. The feature is fully declared
   in the spec.
-- **`state_assertions`** need variable scope. The prompt-target harness doesn't track a
-  variable bag (the LLM does it implicitly), so `final_variables` stays empty. The
-  assertion *shape* is demonstrated.
 - **Persona `vars` matter most for pre-context agents.** fnol captures almost everything live,
   so `happy-known-caller` (binding the `known-caller` persona) only shows the injection
   mechanism — a caller pre-authenticated in the app, seeded via the persona's `vars`.
@@ -294,8 +310,8 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
 ## Further reading
 
 - [`AGENTS.md`](AGENTS.md) — the working guide for this repo: orientation, the flowstore model, how to author the spec, a testing overview, and conventions. Start here if you're (human or agent) about to change the spec.
-- [`docs/testing-from-scripts.md`](docs/testing-from-scripts.md) — the bring-your-own-script testing path in depth (file shapes, the run loop, mock dispatch).
-- [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — authoring agent prompts test-first.
+- [testing-from-scripts.md](https://github.com/tap2k/flowstore/blob/main/docs/testing-from-scripts.md) (flowstore repo) — the bring-your-own-script testing path in depth (file shapes, the run loop, mock dispatch).
+- [test-driven-prompts.md](https://github.com/tap2k/flowstore/blob/main/docs/test-driven-prompts.md) (flowstore repo) — authoring agent prompts test-first.
 - [`prompts/GOLD-EXTRACTION-PROMPT.txt`](prompts/GOLD-EXTRACTION-PROMPT.txt) — the LLM prompt that turns source material (transcripts, scripts, docs) into `tests/gold/*.gold.json` records.
 
 **New to flowstore?** It's a behavioral spec format for conversational agents — a graph of *flows* connected by *exit paths*, decomposed into per-concern files in a Git repo (what you see here). The authoritative spec data model is [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md) and the on-disk layout is [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md) in the public flowstore repo; this project is a worked instance of both.
