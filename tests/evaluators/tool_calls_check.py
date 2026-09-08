@@ -27,12 +27,24 @@ def _capabilities_from_spec(spec):
     return out
 
 
-def check_calls(capability_calls, capabilities):
+# Declared inputs the agent may legitimately omit. The spec has no notion of an
+# optional capability input — every declared input becomes a required tool
+# parameter — but some are best-effort by design (flow_other_party_info: "skip
+# any the caller doesn't have"; variables.json: "if filed", "if available").
+# Project default for fnol; edit for your own agent.
+OPTIONAL_INPUTS = {
+    "cap_file_claim": {"police_report_number", "other_party_insurer", "other_party_contact"},
+}
+
+
+def check_calls(capability_calls, capabilities, optional_inputs=None):
     """Return (passed: bool, violations: list[str]).
 
     - capability_calls: result["capability_calls"].
     - capabilities: {id: [input names]} from the spec.
+    - optional_inputs: {id: {input names}} the call may omit (default OPTIONAL_INPUTS).
     """
+    optional_inputs = OPTIONAL_INPUTS if optional_inputs is None else optional_inputs
     violations = []
     for call in capability_calls or []:
         cid = call.get("capability")
@@ -40,7 +52,8 @@ def check_calls(capability_calls, capabilities):
         if cid not in capabilities:
             violations.append(f"unknown capability {cid!r} (not in spec)")
             continue
-        missing = [inp for inp in capabilities[cid] if inp not in params]
+        optional = optional_inputs.get(cid, set())
+        missing = [inp for inp in capabilities[cid] if inp not in params and inp not in optional]
         if missing:
             violations.append(f"{cid}: missing declared input(s) {missing}")
     return (not violations), violations

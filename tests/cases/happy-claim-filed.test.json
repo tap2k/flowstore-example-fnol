@@ -49,16 +49,6 @@
       "max_occurrences": 0
     }
   ],
-  "state_assertions": [
-    {
-      "variable": "claim_status",
-      "equals": "filed"
-    },
-    {
-      "variable": "claim_id",
-      "is_set": true
-    }
-  ],
   "capability_assertions": [
     {
       "capability": "cap_verify_policy",

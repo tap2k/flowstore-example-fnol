@@ -1,12 +1,10 @@
 {
   "$schema": "flowstore://test/case/v0",
   "id": "persona-impatient-human",
-  "name": "Caller demands a human \u2014 persona-driven handoff",
-  "notes": "Persona-driven: the impatient-wants-human persona asks for a person early and holds the line. Tests that int_human_handoff triggers promptly, fires cap_transfer_to_human, and the agent doesn't argue or stall.",
+  "name": "Caller demands a human — persona-driven handoff",
+  "notes": "Persona-driven: the impatient-wants-human persona asks for a person early and holds the line. Tests that int_human_handoff triggers promptly and fires cap_transfer_to_human (a terminal capability, so the call is short by design — too short for an LLM-judge rubric, hence the capability assertion).",
   "persona_id": "impatient-wants-human",
-  "evaluators": [
-    "empathy_maintained"
-  ],
+  "evaluators": [],
   "transcript_assertions": [
     {
       "kind": "must_terminate_within",
@@ -28,5 +26,11 @@
         "ok": true
       }
     }
-  }
+  },
+  "capability_assertions": [
+    {
+      "capability": "cap_transfer_to_human",
+      "invoked": true
+    }
+  ]
 }

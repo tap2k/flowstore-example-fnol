@@ -13,7 +13,7 @@
   },
   "mocks": {
     "cap_verify_policy": {
-      "kind": "returns",
+      "kind": "static",
       "returns": {
         "policy_active": true,
         "deductible_amount": 500,
@@ -21,7 +21,7 @@
       }
     },
     "cap_file_claim": {
-      "kind": "returns",
+      "kind": "static",
       "returns": {
         "claim_id": "NW-2026-018472",
         "estimated_callback_window": "2 hours"
