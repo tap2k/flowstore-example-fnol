@@ -49,7 +49,7 @@ to this upstream repo — and is the quickest one-off look:
 3. Drag the project **folder** onto the drop zone, or click **Choose folder…** and pick it.
    Drop the *folder*, not a GitHub `.zip` — the editor's ZIP import expects a flat,
    editor-exported zip, not GitHub's wrapped one. The loader reads only the canonical
-   flowstore files and ignores `scripts/`, `tests/`, `.venv/`, `.git/`, and the rest.
+   flowstore files and ignores `scripts/`, `tests/`, `docs/`, `.venv/`, `.git/`, and the rest.
 
 Either way, all 16 flows land on the canvas, validated on load.
 
@@ -310,8 +310,8 @@ provider-neutral — swap the SDK calls in `scripts/_agent.py` / `scripts/_judge
 ## Further reading
 
 - [`AGENTS.md`](AGENTS.md) — the working guide for this repo: orientation, the flowstore model, how to author the spec, a testing overview, and conventions. Start here if you're (human or agent) about to change the spec.
-- [testing-from-scripts.md](https://github.com/tap2k/flowstore/blob/main/docs/testing-from-scripts.md) (flowstore repo) — the bring-your-own-script testing path in depth (file shapes, the run loop, mock dispatch).
-- [test-driven-prompts.md](https://github.com/tap2k/flowstore/blob/main/docs/test-driven-prompts.md) (flowstore repo) — authoring agent prompts test-first.
+- [`docs/testing-from-scripts.md`](docs/testing-from-scripts.md) — the bring-your-own-script testing path in depth (file shapes, the run loop, mock dispatch).
+- [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — authoring agent prompts test-first.
 - [`prompts/GOLD-EXTRACTION-PROMPT.txt`](prompts/GOLD-EXTRACTION-PROMPT.txt) — the LLM prompt that turns source material (transcripts, scripts, docs) into `tests/gold/*.gold.json` records.
 
 **New to flowstore?** It's a behavioral spec format for conversational agents — a graph of *flows* connected by *exit paths*, decomposed into per-concern files in a Git repo (what you see here). The authoritative spec data model is [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md) and the on-disk layout is [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md) in the public flowstore repo; this project is a worked instance of both.

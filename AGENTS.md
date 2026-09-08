@@ -56,7 +56,7 @@ Every `.json` carries a `$schema` URI and is validated on load. The README's "Fe
 Two equivalent ways to edit — both operate on the same spec:
 
 - **The hosted editor** at [create.flowstore.org](https://create.flowstore.org) (no install). Open this project (GitHub-open round-trips Save back to the repo; or Import the folder for a read-only look). Flows are nodes on a canvas; the toolbar sheets edit the envelope. The **Assistant** (sparkles) edits through schema-aware tools and re-validates after each change. Loading/browsing needs no key; the Assistant, Run, and Save do.
-- **Editing the files directly** in this repo. The loader reads only the canonical flowstore files and ignores `scripts/`, `tests/`, `.venv/`, `.git/`. Anything you write is validated against the schema on load (Ajv + graph rules), so a malformed change is rejected with errors rather than silently accepted.
+- **Editing the files directly** in this repo. The loader reads only the canonical flowstore files and ignores `scripts/`, `tests/`, `docs/`, `.venv/`, `.git/`. Anything you write is validated against the schema on load (Ajv + graph rules), so a malformed change is rejected with errors rather than silently accepted.
 
 [AGENT-SPEC-PROMPT.txt](https://github.com/tap2k/flowstore/blob/main/AGENT-SPEC-PROMPT.txt) (maintained in the flowstore repo) converts raw source material (`fnol.txt` is this agent's original design narrative) into a v0 spec — run it in the Assistant ("Build from source") or paste it into any LLM and import the JSON it returns.
 
@@ -70,8 +70,8 @@ This is the **bring-your-own-runner** path: flowstore gives you a compiler and v
 
 **The full testing reference lives in two docs — read them for anything beyond this overview:**
 
-- [testing-from-scripts.md](https://github.com/tap2k/flowstore/blob/main/docs/testing-from-scripts.md) — the **mechanics**: the compile contract, every test-file shape, the result contract, mock dispatch, the runner CLIs.
-- [test-driven-prompts.md](https://github.com/tap2k/flowstore/blob/main/docs/test-driven-prompts.md) — the **methodology**: golds → cases → run → diagnose, authoring assertions, trials, A/B comparison, when to fix the spec vs the generator vs the assertions.
+- [`docs/testing-from-scripts.md`](docs/testing-from-scripts.md) — the **mechanics**: the compile contract, every test-file shape, the result contract, mock dispatch, the runner CLIs.
+- [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — the **methodology**: golds → cases → run → diagnose, authoring assertions, trials, A/B comparison, when to fix the spec vs the generator vs the assertions.
 
 ### Compile + test in the editor (no setup)
 
@@ -114,8 +114,8 @@ cp .env.example .env   # then fill in GOOGLE_API_KEY + FLOWSTORE_COMPILE_CMD; th
 
 ## Related docs
 
-- [testing-from-scripts.md](https://github.com/tap2k/flowstore/blob/main/docs/testing-from-scripts.md) — testing mechanics (file shapes, runner, mock dispatch).
-- [test-driven-prompts.md](https://github.com/tap2k/flowstore/blob/main/docs/test-driven-prompts.md) — test-first prompt-engineering methodology.
+- [`docs/testing-from-scripts.md`](docs/testing-from-scripts.md) — testing mechanics (file shapes, runner, mock dispatch).
+- [`docs/test-driven-prompts.md`](docs/test-driven-prompts.md) — test-first prompt-engineering methodology.
 - [`SCHEMA.md`](https://github.com/tap2k/flowstore/blob/main/SCHEMA.md) — the spec data model (authoritative; public flowstore repo).
 - [`FILE-MODEL.md`](https://github.com/tap2k/flowstore/blob/main/FILE-MODEL.md) — how a flowstore project decomposes into files on disk.
 - [`README.md`](README.md) — the human onramp: editor walkthrough, feature→file map, quickstart.
