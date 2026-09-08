@@ -32,7 +32,6 @@ import argparse
 import json
 import os
 import sys
-import tempfile
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,7 +43,8 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _judge import judge_one, load_rubric  # noqa: E402
-from _agent import PromptAgent, RunnerAgent, EndpointAgent, prompt_source_label, spoken_text  # noqa: E402
+from _agent import (Conversation, RunnerAgent, EndpointAgent, make_dispatcher, mock_returns_for_runner,  # noqa: E402
+                    name_to_id, prompt_source_label, spoken_text, vars_to_tempfile)
 from _compile import compile_prompt, compile_spec  # noqa: E402
 
 # ---- args ----
@@ -200,30 +200,8 @@ def _format_gold_with_vars(gold: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _vars_to_tempfile(vars_dict: dict[str, Any]) -> Path:
-    """Write vars to a temp JSON file for the compiler subprocess."""
-    fd, path = tempfile.mkstemp(prefix="gold-vars-", suffix=".json")
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(vars_dict, f, ensure_ascii=False)
-    return Path(path)
 
 
-def _build_gemini_tools(tool_schemas: list[dict[str, Any]]) -> list | None:
-    if not tool_schemas:
-        return None
-
-    def _clean(schema: dict[str, Any]) -> dict[str, Any]:
-        out = {k: v for k, v in schema.items() if k != "additionalProperties"}
-        if "properties" in out and isinstance(out["properties"], dict):
-            out["properties"] = {k: _clean(v) for k, v in out["properties"].items()}
-        return out
-
-    return [types.Tool(function_declarations=[
-        types.FunctionDeclaration(
-            name=t["name"], description=t["description"],
-            parameters=_clean(t["parameters"]),
-        ) for t in tool_schemas
-    ])]
 
 
 def _prepare_for_target(vars_: dict[str, Any], vars_file: Path):
@@ -233,7 +211,7 @@ def _prepare_for_target(vars_: dict[str, Any], vars_file: Path):
             system_prompt = _substitute(args.system_prompt.read_text(encoding="utf-8"), vars_)
             return system_prompt, None, None
         system_prompt, tool_schemas, _ = compile_prompt(PROJECT, vars_file=vars_file)
-        return system_prompt, _build_gemini_tools(tool_schemas), None
+        return system_prompt, tool_schemas, None
 
     if args.target == "runner":
         spec_json = compile_spec(PROJECT, vars_file=vars_file)
@@ -243,17 +221,17 @@ def _prepare_for_target(vars_: dict[str, Any], vars_file: Path):
     return None, None, None
 
 
-def _make_agent(system_prompt, gemini_tools, spec_json, vars_):
+def _make_agent(system_prompt, tool_schemas, spec_json, vars_, mocks):
     if args.target == "prompt":
-        return PromptAgent(
-            client=client, model=model,
-            system_prompt=system_prompt, gemini_tools=gemini_tools,
-            chatbot_initiates=chatbot_initiates, thinking=args.thinking,
+        name_map = name_to_id(agent_envelope, project_dir=PROJECT)
+        return Conversation(
+            client, model, system_prompt, tool_schemas,
+            make_dispatcher(mocks, name_map), name_map, thinking=args.thinking,
         )
     if args.target == "runner":
         return RunnerAgent(
             runner_url=runner_url, spec=spec_json, api_key=api_key,
-            model=model, context_vars=vars_, mock_returns={},
+            model=model, context_vars=vars_, mock_returns=mock_returns_for_runner(mocks, spec_json),
             chatbot_initiates=chatbot_initiates, language=agent_language,
         )
     return EndpointAgent(
@@ -263,14 +241,14 @@ def _make_agent(system_prompt, gemini_tools, spec_json, vars_):
 
 
 def run_one_trial(
-    system_prompt, gemini_tools, spec_json, vars_,
+    system_prompt, tool_schemas, spec_json, vars_, mocks,
     user_turns: list[str], gold_text: str,
 ) -> dict[str, Any]:
     transcript: list[dict[str, Any]] = []
     err: str | None = None
-    agent = _make_agent(system_prompt, gemini_tools, spec_json, vars_)
+    agent = _make_agent(system_prompt, tool_schemas, spec_json, vars_, mocks)
     try:
-        opening = spoken_text(agent.start())
+        opening = spoken_text(agent.start()) if chatbot_initiates else ""
         if opening:
             transcript.append({"role": "agent", "content": opening})
         for user_turn in user_turns:
@@ -318,21 +296,23 @@ for gold_path in gold_paths:
         print("  SKIP: no user turns", file=sys.stderr)
         continue
 
-    vars_file = _vars_to_tempfile(vars_)
+    vars_file = vars_to_tempfile(vars_)
     try:
-        system_prompt, gemini_tools, spec_json = _prepare_for_target(vars_, vars_file)
+        system_prompt, tool_schemas, spec_json = _prepare_for_target(vars_, vars_file)
     except Exception as e:  # noqa: BLE001
         print(f"  compile error: {e}", file=sys.stderr)
-        vars_file.unlink(missing_ok=True)
+        if vars_file:
+            vars_file.unlink(missing_ok=True)
         continue
 
     try:
         trials_out = [
-            run_one_trial(system_prompt, gemini_tools, spec_json, vars_, user_turns, gold_text)
+            run_one_trial(system_prompt, tool_schemas, spec_json, vars_, gold.get("mocks") or {}, user_turns, gold_text)
             for _ in range(args.trials)
         ]
     finally:
-        vars_file.unlink(missing_ok=True)
+        if vars_file:
+            vars_file.unlink(missing_ok=True)
 
     trial0 = trials_out[0]
     trial0_extras = trial0.get("extras") or {}

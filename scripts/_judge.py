@@ -105,6 +105,10 @@ def judge_one(
         )
         verdict = RubricVerdict.model_validate_json(resp.text)
         score = max(scale["min"], min(scale["max"], verdict.score))
-        return {"name": rubric["id"], "score": score, "notes": verdict.notes}
+        scale_min, scale_max = scale.get("min", 1), scale.get("max", 5)
+        return {"name": rubric["id"], "score": score,
+                "passed": score >= (scale_min + scale_max) / 2.0,
+                "notes": verdict.notes}
     except Exception as e:  # noqa: BLE001
         return {"name": rubric["id"], "score": None, "notes": f"judge error: {type(e).__name__}: {e}"}
+

@@ -24,11 +24,9 @@ Target options:
 
 from __future__ import annotations
 
-import csv
 import json
 import os
 import re
-import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -169,120 +167,6 @@ def spoken_text(raw: str) -> str:
     else:
         cleaned = _VERIFICATION_RE.sub("", raw)
     return _STRAY_TAG_RE.sub("", cleaned).strip()
-
-
-def warn_if_language_missing_in_scripts(project: Path, language: str | None) -> None:
-    """Walk flows/*.scripts.csv and warn (to stderr) if `language` isn't a
-    column in any of them. Empty scripts silently produce nonsense agent
-    output — better to flag at startup than chase a wrong-language conversation
-    later. No-op if language is None or the flows dir doesn't exist."""
-    if not language:
-        return
-    flows_dir = project / "flows"
-    if not flows_dir.is_dir():
-        return
-    missing: list[str] = []
-    for csv_path in sorted(flows_dir.glob("*.scripts.csv")):
-        try:
-            with csv_path.open(newline="", encoding="utf-8") as f:
-                reader = csv.reader(f)
-                header = next(reader, None) or []
-        except (OSError, StopIteration):
-            continue
-        # Header columns are typically [id, EN, ES, ...] or similar. Allow
-        # case-insensitive match.
-        cols_lower = {c.strip().lower() for c in header}
-        if language.lower() not in cols_lower:
-            missing.append(csv_path.name)
-    if missing:
-        print(
-            f"WARN: language={language!r} not found as a column in "
-            f"{len(missing)} flow script CSV(s): {', '.join(missing[:5])}"
-            + (f" (+{len(missing) - 5} more)" if len(missing) > 5 else "")
-            + ". Agent scripts for those flows will be empty.",
-            file=sys.stderr,
-        )
-
-
-# ---------- Prompt-direct driver ----------
-
-
-class PromptAgent:
-    """Direct Gemini call. The simplest surface — no spec graph, no runner."""
-
-    def __init__(
-        self,
-        client: genai.Client,
-        model: str,
-        system_prompt: str,
-        gemini_tools: list | None,
-        chatbot_initiates: bool,
-        thinking: bool = False,
-    ) -> None:
-        self.client = client
-        self.model = model
-        self._config = types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            tools=gemini_tools,
-            temperature=0.0,
-            # Flash thinking off by default (matches the runner; Pro rejects budget=0).
-            thinking_config=(
-                types.ThinkingConfig(thinking_budget=0)
-                if not thinking and "flash" in (model or "").lower()
-                else None
-            ),
-        )
-        self.chatbot_initiates = chatbot_initiates
-        self.contents: list[types.Content] = []
-        # capability_calls / final_variables aren't visible from the prompt-direct
-        # surface (no graph execution). They stay empty so the result shape is
-        # consistent across drivers.
-        self._capability_calls: list[dict[str, Any]] = []
-
-    def _generate(self) -> str:
-        resp = self.client.models.generate_content(
-            model=self.model, contents=self.contents, config=self._config
-        )
-        parts = resp.candidates[0].content.parts or []
-        # Keep the RAW model text (tags included) in the conversation history so
-        # the model sees its own <VERIFICATION> reasoning on later turns, but
-        # return only what the TTS pipeline would speak — every consumer (judges,
-        # substring assertions, persona simulated-user, stored transcript) should
-        # see spoken text, not the internal scaffolding.
-        self.contents.append(types.Content(role="model", parts=parts))
-        raw = "\n".join(p.text for p in parts if getattr(p, "text", None) and p.text).strip()
-        return spoken_text(raw)
-
-    def start(self) -> str:
-        if self.chatbot_initiates:
-            self.contents.append(types.Content(role="user", parts=[types.Part.from_text(text=" ")]))
-            return self._generate()
-        return ""
-
-    def turn(self, user_text: str) -> str:
-        self.contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_text)]))
-        return self._generate()
-
-    def truncate_last_reply(self, spoken_prefix: str) -> None:
-        """Barge-in (T1): overwrite the last model turn in history with the
-        prefix the caller actually heard before interrupting, so the agent's
-        next turn reacts to having been cut off. Prompt-target only — a live
-        runner/endpoint session can't un-speak a turn (the same constraint that
-        makes barge-in hard in real voice)."""
-        if self.contents and self.contents[-1].role == "model":
-            self.contents[-1] = types.Content(
-                role="model", parts=[types.Part.from_text(text=spoken_prefix)]
-            )
-
-    def end(self) -> None:
-        pass
-
-    def extras(self) -> dict[str, Any]:
-        return {
-            "capability_calls": self._capability_calls,
-            "final_variables": {},
-            "flow_trace": [],
-        }
 
 
 # ---------- Runner-via-HTTP driver ----------
@@ -518,178 +402,388 @@ def prompt_source_label(target: str, endpoint_url: str | None = None) -> str:
     return target
 
 
-def transcript_assertion_evals(
-    transcript_assertions: list[dict[str, Any]],
-    transcript: list[dict[str, str]],
-) -> list[dict[str, Any]]:
-    """Evaluate flowstore://test/case/v0 transcript_assertions[] over the
-    full agent-side transcript. Cheap-predicate complement to per-turn
-    assertions and rubrics.
+# ---------- Prompt-mode driver ----------
+#
+# Conversation is the single compiled-prompt driver: every runner (scripted,
+# persona, decision, golds) drives Gemini through it, dispatching tool calls to
+# fixture mocks and recording them. RunnerAgent / EndpointAgent above are the
+# alternative --target surfaces for run_golds (a live flowstore-runner or a
+# deployed agent) and share the same start/turn/end/extras interface.
 
-    Operators (kind):
-      substring             — case-insensitive substring match anywhere
-                              in the joined agent transcript; must_appear
-                              defaults to True (asserts presence) or False
-                              (asserts absence)
-      regex                 — same but pattern is a regex; case-sensitive
-                              by default (callers can prefix (?i))
-      count                 — case-insensitive substring count in
-                              [min_occurrences, max_occurrences]; either
-                              bound is optional
-      must_terminate_within — len(agent_turns) <= max_turns
+def _iter_capability_files(project_dir: Path):
+    cap_dir = project_dir / "capabilities"
+    if not cap_dir.is_dir():
+        return
+    for path in sorted(cap_dir.glob("*.capability.json")):
+        yield path
 
-    Returns one eval per assertion, named `transcript_<kind>[_<i>]`.
+
+def name_to_id(agent_dict, project_dir=None):
+    """Build a {capability_name -> capability_id} map.
+
+    agent.json doesn't enumerate capabilities, so the authoritative source is
+    the capabilities/*.capability.json files (each declares both id and name).
+    If a compiled spec dict is passed in place of agent_dict and carries a
+    "capabilities" array, we honour that too. project_dir is required to read
+    the capability files when agent_dict alone doesn't list them.
     """
-    agent_turns = [t["content"] for t in transcript if t.get("role") == "agent"]
-    agent_text = "\n".join(agent_turns)
-    agent_text_lc = agent_text.lower()
+    mapping: dict[str, str] = {}
 
-    evals: list[dict[str, Any]] = []
-    counts_by_kind: dict[str, int] = {}
-    for ta in transcript_assertions or []:
-        kind = ta.get("kind", "")
-        idx = counts_by_kind.get(kind, 0)
-        counts_by_kind[kind] = idx + 1
-        name = f"transcript_{kind}_{idx}" if kind else f"transcript_<unknown>_{idx}"
+    # 1) If we were given a spec-like dict with capabilities, use it.
+    caps = None
+    if isinstance(agent_dict, dict):
+        caps = agent_dict.get("capabilities")
+    if isinstance(caps, list):
+        for cap in caps:
+            cid = cap.get("id")
+            cname = cap.get("name")
+            if cid and cname:
+                mapping[cname] = cid
 
-        if kind == "substring":
-            pattern = ta.get("pattern", "")
-            must_appear = ta.get("must_appear", True)
-            if not pattern:
-                evals.append({"name": name, "passed": False,
-                              "notes": "substring assertion missing required: pattern"})
-                continue
-            present = pattern.lower() in agent_text_lc
-            passed = present == bool(must_appear)
-            evals.append({"name": name, "passed": passed,
-                          "notes": ("ok" if passed
-                                    else f"{'leaked' if present else 'missing'}: {pattern!r}")})
+    # 2) Otherwise (or additionally) read the capability files on disk.
+    if project_dir is not None:
+        for path in _iter_capability_files(Path(project_dir)):
+            cap = json.loads(path.read_text(encoding="utf-8"))
+            cid = cap.get("id")
+            cname = cap.get("name")
+            if cid and cname:
+                mapping.setdefault(cname, cid)
 
-        elif kind == "regex":
-            pattern = ta.get("pattern", "")
-            must_appear = ta.get("must_appear", True)
-            if not pattern:
-                evals.append({"name": name, "passed": False,
-                              "notes": "regex assertion missing required: pattern"})
-                continue
-            try:
-                hit = bool(re.search(pattern, agent_text))
-            except re.error as exc:
-                evals.append({"name": name, "passed": False,
-                              "notes": f"invalid regex {pattern!r}: {exc}"})
-                continue
-            passed = hit == bool(must_appear)
-            evals.append({"name": name, "passed": passed,
-                          "notes": ("ok" if passed
-                                    else f"regex {pattern!r} {'hit unexpectedly' if hit else 'no match'}")})
+    return mapping
 
-        elif kind == "count":
-            pattern = ta.get("pattern", "")
-            lo = ta.get("min_occurrences")
-            hi = ta.get("max_occurrences")
-            if not pattern:
-                evals.append({"name": name, "passed": False,
-                              "notes": "count assertion missing required: pattern"})
-                continue
-            if lo is None and hi is None:
-                evals.append({"name": name, "passed": False,
-                              "notes": "count assertion requires at least one of min_occurrences / max_occurrences"})
-                continue
-            n = agent_text_lc.count(pattern.lower())
-            in_range = (lo is None or n >= lo) and (hi is None or n <= hi)
-            rng = f"[{lo if lo is not None else '*'}..{hi if hi is not None else '*'}]"
-            evals.append({"name": name, "passed": in_range,
-                          "notes": "ok" if in_range else f"got {n} occurrences of {pattern!r}, want {rng}"})
 
-        elif kind == "must_terminate_within":
-            max_turns = ta.get("max_turns")
-            if max_turns is None:
-                evals.append({"name": name, "passed": False,
-                              "notes": "must_terminate_within requires max_turns"})
-                continue
-            n = len(agent_turns)
-            passed = n <= int(max_turns)
-            evals.append({"name": name, "passed": passed,
-                          "notes": "ok" if passed else f"agent emitted {n} turns, max_turns={max_turns}"})
+def make_dispatcher(mocks, name_map):
+    """Build a dispatcher fn from a resolved `mocks` dict (capability_id ->
+    behavior {kind, returns|error}).
 
+    Resolves the called tool name -> id -> behavior and returns (result,
+    error). Caps with no mock yield a soft error so the agent loop can keep
+    going and the miss shows up in the transcript.
+    """
+    mocks = mocks or {}
+
+    def dispatch(capability_name, params):
+        cid = name_map.get(capability_name, capability_name)
+        behavior = mocks.get(cid)
+        if behavior is None:
+            return None, f"no mock for capability '{cid}' in this fixture"
+        kind = behavior.get("kind")
+        if kind == "error":
+            return None, str(behavior.get("error", "mock error"))
+        return behavior.get("returns", {}), None
+
+    return dispatch
+
+
+# ---------- Gemini glue (the only provider-specific code; swap this block to retarget) ----------
+
+def make_client():
+    """Construct a Gemini client from GOOGLE_API_KEY / GEMINI_API_KEY.
+
+    Imported lazily by callers so that --help and ast checks never require the
+    SDK or a key.
+    """
+    from google import genai
+
+    api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "Set GOOGLE_API_KEY or GEMINI_API_KEY to run the harness."
+        )
+    return genai.Client(api_key=api_key)
+
+
+def _gemini_clean(schema):
+    """Strip JSON-Schema keys Gemini's function-declaration parser rejects.
+
+    flowstore tool schemas are plain JSON Schema; Gemini accepts a restricted
+    subset. We recursively drop the unsupported keys ($schema, additionalProperties,
+    examples, default, title, const, and the like) and normalise "type" casing,
+    keeping properties/items/enum/description/required/type/format/nullable.
+    """
+    if isinstance(schema, list):
+        return [_gemini_clean(s) for s in schema]
+    if not isinstance(schema, dict):
+        return schema
+
+    drop = {
+        "$schema", "$id", "$ref", "$comment", "additionalProperties",
+        "examples", "default", "title", "const", "definitions", "$defs",
+        "pattern", "minLength", "maxLength", "minimum", "maximum",
+        "minItems", "maxItems", "uniqueItems", "patternProperties",
+    }
+    out = {}
+    for key, val in schema.items():
+        if key in drop:
+            continue
+        if key in ("properties", "$defs"):
+            out[key] = {k: _gemini_clean(v) for k, v in val.items()}
+        elif key in ("items", "additionalItems"):
+            out[key] = _gemini_clean(val)
+        elif key in ("anyOf", "oneOf", "allOf"):
+            out[key] = [_gemini_clean(v) for v in val]
+        elif key == "type" and isinstance(val, str):
+            out[key] = val.upper()
         else:
-            evals.append({"name": name, "passed": False,
-                          "notes": f"unknown transcript_assertion kind: {kind!r}"})
-
-    return evals
+            out[key] = val
+    return out
 
 
-def state_assertion_evals(
-    state_assertions: list[dict[str, Any]],
-    final_variables: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Evaluate flowstore://test/case/v0 state_assertions[] against
-    result.final_variables. Returns one eval per assertion.
+def build_gemini_tools(tool_schemas):
+    """Turn compiled flowstore tool schemas into a Gemini Tool list.
 
-    Each assertion requires exactly one of equals / matches / is_set.
-    Semantics:
-      equals  — strict equality (Python ==) against the bound value
-      matches — regex against str(value)
-      is_set  — True: variable bound to a non-None value
-                False: variable absent or bound to None
-
-    Runner-target runs populate final_variables from variable_set events;
-    system-prompt runs don't. State assertions against an empty
-    final_variables fail loud (with the exception of `is_set: False`,
-    which is trivially satisfied when there are no variables).
+    Each flowstore tool schema is expected to look like
+    {"name", "description", "parameters": {<json schema object>}}. We clean the
+    parameter schema and wrap everything in a single Tool with N function
+    declarations. Returns (tools, config_types) where config_types is the genai
+    types module (so callers can build GenerateContentConfig without re-importing).
     """
-    evals: list[dict[str, Any]] = []
-    for sa in state_assertions or []:
-        var = sa.get("variable", "")
-        eq_set = "equals" in sa
-        match_set = "matches" in sa
-        isset_set = "is_set" in sa
-        op_count = sum([eq_set, match_set, isset_set])
-        name = f"state_{var}" if var else "state_<unnamed>"
+    from google.genai import types
 
-        if not var:
-            evals.append({"name": name, "passed": False,
-                          "notes": "missing required field: variable"})
-            continue
-        if op_count != 1:
-            evals.append({"name": name, "passed": False,
-                          "notes": f"exactly one of equals/matches/is_set required (got {op_count})"})
-            continue
-        if not final_variables and not (isset_set and sa["is_set"] is False):
-            evals.append({"name": name, "passed": False,
-                          "notes": "no final_variables in result — run with --target runner"})
-            continue
+    declarations = []
+    for tool in tool_schemas or []:
+        params = tool.get("parameters") or tool.get("input_schema") or {}
+        cleaned = _gemini_clean(params)
+        if cleaned and "type" not in cleaned:
+            cleaned["type"] = "OBJECT"
+        declarations.append(
+            types.FunctionDeclaration(
+                name=tool["name"],
+                description=tool.get("description", ""),
+                parameters=cleaned or None,
+            )
+        )
+    tools = [types.Tool(function_declarations=declarations)] if declarations else []
+    return tools, types
 
-        bound = var in final_variables
-        value = final_variables.get(var)
 
-        if isset_set:
-            want_set = bool(sa["is_set"])
-            actually_set = bound and value is not None
-            passed = actually_set == want_set
-            evals.append({"name": name, "passed": passed,
-                          "notes": f"is_set={actually_set}, want {want_set}"})
-            continue
+# ---------- Conversation: drive the compiled agent through a dialogue ----------
 
-        if not bound:
-            evals.append({"name": name, "passed": False,
-                          "notes": f"variable {var!r} not bound (final_variables keys: {sorted(final_variables.keys())})"})
-            continue
+# Hard cap on the inner tool-call loop per agent turn — prevents a runaway
+# model from calling tools forever.
+MAX_TOOL_ITERS = 8
 
-        if eq_set:
-            want = sa["equals"]
-            passed = value == want
-            evals.append({"name": name, "passed": passed,
-                          "notes": "ok" if passed else f"got {value!r}, want {want!r}"})
-        else:  # match_set
-            pattern = sa["matches"]
+
+def terminal_capability_ids(agent_dict: dict) -> set[str]:
+    """IDs of capabilities flagged `ends_conversation` — the agent invoking one
+    is its "hang up", so the prompt-mode loop should stop after that turn. Mirrors
+    the runner raising a terminal SessionEnded and the editor sim ending."""
+    return {
+        c["id"]
+        for c in (agent_dict.get("capabilities") or [])
+        if isinstance(c, dict) and c.get("ends_conversation") and c.get("id")
+    }
+
+
+class Conversation:
+    """Holds dialogue state for one agent run and exposes agent_reply().
+
+    Public attributes the runners read afterwards:
+      - transcript: list of {"role": "agent"|"user"|"system", "content": str}
+      - capability_calls: list of {"capability", "params", "result"/"error", "timestamp"}
+      - contents: the provider-native message list (Gemini Content objects)
+
+    The agent speaks first when the project sets chatbot_initiates; the runner
+    triggers that opening line by calling agent_reply(None).
+    """
+
+    def __init__(self, client, model, system_prompt, tool_schemas, dispatcher,
+                 name_map, thinking=False):
+        self._client = client
+        self._model = model
+        self._system_prompt = system_prompt
+        self._dispatcher = dispatcher
+        self._name_map = name_map
+
+        self.transcript: list[dict] = []
+        self.capability_calls: list[dict] = []
+
+        tools, types = build_gemini_tools(tool_schemas)
+        self._types = types
+        # temperature 0.0 for determinism; system prompt pinned as instruction.
+        self._config = types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=0.0,
+            tools=tools,
+            # Flash thinking off by default (matches the runner; Pro rejects budget=0).
+            thinking_config=(
+                types.ThinkingConfig(thinking_budget=0)
+                if not thinking and "flash" in (model or "").lower()
+                else None
+            ),
+        )
+        # Provider-native running history.
+        self.contents: list = []
+
+    # -- helpers ---------------------------------------------------------
+
+    def _now(self) -> str:
+        from datetime import datetime, timezone
+        return datetime.now(timezone.utc).isoformat()
+
+    def _record_call(self, capability_name, params, result, error):
+        cid = self._name_map.get(capability_name, capability_name)
+        entry = {"capability": cid, "params": params, "timestamp": self._now()}
+        if error is not None:
+            entry["error"] = error
+        else:
+            entry["result"] = result
+        self.capability_calls.append(entry)
+
+    # -- main loop -------------------------------------------------------
+
+    def truncate_last_reply(self, spoken_prefix):
+        """Barge-in (T1): overwrite the last agent turn — in both the model
+        history and the recorded transcript — with the prefix the caller heard
+        before cutting in, so the agent's next turn reacts to being interrupted.
+        Prompt-target only (a live session can't un-speak)."""
+        types = self._types
+        if self.contents and getattr(self.contents[-1], "role", None) == "model":
+            self.contents[-1] = types.Content(
+                role="model", parts=[types.Part.from_text(text=spoken_prefix)]
+            )
+        for t in reversed(self.transcript):
+            if t["role"] == "agent":
+                t["content"] = spoken_prefix
+                t["barge_in_truncated"] = True
+                break
+
+    def agent_reply(self, user_text, barge_in=False):
+        """Advance the dialogue by one agent turn and return its text.
+
+        Pass user_text=None for the opening turn (chatbot_initiates) — we then
+        prompt the model with a neutral system-level kickoff so it produces its
+        greeting. Otherwise the user's message is appended first.
+
+        The inner loop: generate -> if the model emitted function calls, dispatch
+        each via the dispatcher, feed the function responses back, and regenerate
+        — up to MAX_TOOL_ITERS times — until the model returns plain text.
+        """
+        types = self._types
+
+        if user_text is None:
+            if not self.contents:
+                # Kickoff: a minimal user turn so the model opens per its prompt.
+                self.contents.append(
+                    types.Content(role="user", parts=[types.Part.from_text(
+                        text="(The customer has just connected. Begin the call.)"
+                    )])
+                )
+        else:
+            user_entry = {"role": "user", "content": user_text}
+            if barge_in:
+                user_entry["barge_in"] = True
+            self.transcript.append(user_entry)
+            self.contents.append(
+                types.Content(role="user",
+                              parts=[types.Part.from_text(text=user_text)])
+            )
+
+        final_text = ""
+        for _ in range(MAX_TOOL_ITERS):
+            resp = self._generate_with_retry()
+
+            candidate = resp.candidates[0] if resp.candidates else None
+            parts = []
+            if candidate and candidate.content and candidate.content.parts:
+                parts = candidate.content.parts
+            # Keep the model's turn (text + any function calls) in history.
+            if candidate and candidate.content:
+                self.contents.append(candidate.content)
+
+            function_calls = [p.function_call for p in parts
+                              if getattr(p, "function_call", None)]
+            text_chunks = [p.text for p in parts if getattr(p, "text", None)]
+
+            if not function_calls:
+                final_text = "".join(text_chunks).strip()
+                break
+
+            # Dispatch every function call, then feed responses back in one turn.
+            response_parts = []
+            for fc in function_calls:
+                params = dict(fc.args or {})
+                result, error = self._dispatcher(fc.name, params)
+                self._record_call(fc.name, params, result, error)
+                payload = {"error": error} if error is not None else (result or {})
+                response_parts.append(
+                    types.Part.from_function_response(name=fc.name,
+                                                      response=payload)
+                )
+            self.contents.append(
+                types.Content(role="user", parts=response_parts)
+            )
+        else:
+            # Loop exhausted without a plain-text reply.
+            final_text = final_text or "(agent exceeded tool-call budget)"
+
+        # A tool-only turn (e.g. the agent hung up via an ends_conversation
+        # capability and said nothing after) leaves no spoken text; don't record
+        # an empty agent turn — the capability_calls entry is the record.
+        if final_text:
+            self.transcript.append({"role": "agent", "content": final_text})
+        return final_text
+
+    def _generate_with_retry(self, attempts: int = 3):
+        """generate_content with backoff on transient 5xx / timeout errors, so a
+        single DEADLINE_EXCEEDED from the provider doesn't void a whole trial."""
+        import time
+        from google.genai import errors
+
+        for i in range(attempts):
             try:
-                ok = bool(re.search(pattern, str(value)))
-            except re.error as exc:
-                evals.append({"name": name, "passed": False,
-                              "notes": f"invalid regex {pattern!r}: {exc}"})
-                continue
-            evals.append({"name": name, "passed": ok,
-                          "notes": "ok" if ok else f"regex {pattern!r} did not match {str(value)!r}"})
+                return self._client.models.generate_content(
+                    model=self._model, contents=self.contents, config=self._config,
+                )
+            except errors.ServerError:
+                if i == attempts - 1:
+                    raise
+                time.sleep(2 ** i)
 
-    return evals
+
+    # -- driver interface (same surface as RunnerAgent / EndpointAgent) ------
+
+    def start(self) -> str:
+        """Opening agent turn when the project sets chatbot_initiates."""
+        return self.agent_reply(None)
+
+    def turn(self, user_text: str) -> str:
+        return self.agent_reply(user_text)
+
+    def end(self) -> None:
+        pass
+
+    def extras(self) -> dict:
+        return {"capability_calls": self.capability_calls, "final_variables": {}}
+
+
+# ---------- Shared run-context resolution (used by every runner) ----------
+
+def resolve_paths(tests_file):
+    """From a tests/<...>/<file> path, resolve the project_dir.
+
+    The project root is the nearest ancestor that contains agent.json — we walk
+    up from the test file until we find it. Returns just the project_dir; the
+    flowstore checkout location is no longer needed here (the compiler is invoked
+    via FLOWSTORE_COMPILE_CMD; see scripts/_compile.py).
+    """
+    p = Path(tests_file).resolve()
+    for ancestor in [p] + list(p.parents):
+        if (ancestor / "agent.json").is_file():
+            return ancestor
+    raise RuntimeError(f"could not find a flowstore project (agent.json) above {tests_file}")
+
+
+def default_model(project_dir, role=None):
+    """Resolve the model id for a role from models/defaults.json.
+
+    role None -> the project default; otherwise roles[role] falling back to the
+    default. Returns "gemini-2.5-flash" if no defaults file exists.
+    """
+    path = Path(project_dir) / "models" / "defaults.json"
+    if not path.is_file():
+        return "gemini-2.5-flash"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if role:
+        return data.get("roles", {}).get(role) or data.get("default") or "gemini-2.5-flash"
+    return data.get("default") or "gemini-2.5-flash"
