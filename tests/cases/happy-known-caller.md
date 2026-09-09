@@ -38,18 +38,11 @@ Demonstrates the character sheet: vars (caller_name, policy_number) are edit-tim
 
 ## Turns
 
-- Yeah, everyone's okay, I'm safe.
-
-- Jordan Reese, policy seven seven four two one zero nine.
-
-- Backed into a pole in a parking lot this morning, just me, no police.
-
-- Rear bumper, but it drives fine.
-
-- No other car involved.
-
-- Sure, I'll send photos.
-
-- Yes, that's right.
-
-- Five five five one two one two, as soon as possible.
+User: Yeah, everyone's okay, I'm safe.
+User: Jordan Reese, policy seven seven four two one zero nine.
+User: Backed into a pole in a parking lot this morning, just me, no police.
+User: Rear bumper, but it drives fine.
+User: No other car involved.
+User: Sure, I'll send photos.
+User: Yes, that's right.
+User: Five five five one two one two, as soon as possible.

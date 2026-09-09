@@ -32,14 +32,9 @@ Sad path through the calc-route-after-action junction: verify_policy returns not
 
 ## Turns
 
-- I'm fine, just shaken — need to report a fender bender.
-
-- Pat Lin, policy one two three four five.
-
-- Yes.
-
-- Maybe it's one two three four six?
-
-- Yeah, try that.
-
-- Okay, a person is fine.
+User: I'm fine, just shaken — need to report a fender bender.
+User: Pat Lin, policy one two three four five.
+User: Yes.
+User: Maybe it's one two three four six?
+User: Yeah, try that.
+User: Okay, a person is fine.

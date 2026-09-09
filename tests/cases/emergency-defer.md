@@ -37,6 +37,5 @@ Sad path: caller reports a serious injury, so the calculation-routed safety exit
 
 ## Turns
 
-- No, my passenger is hurt — I think her arm is broken, there's blood.
-
-- Yes, please have someone call me.
+User: No, my passenger is hurt — I think her arm is broken, there's blood.
+User: Yes, please have someone call me.

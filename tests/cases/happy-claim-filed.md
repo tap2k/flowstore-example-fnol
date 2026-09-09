@@ -60,22 +60,13 @@ Full happy path: safety confirmed -> identify (verify_policy active) -> incident
 
 ## Turns
 
-- Yeah, everyone's fine. I'm pulled over on the shoulder.
-
-- Jordan Reese, policy seven seven four two one zero nine.
-
-- That's it.
-
-- About twenty minutes ago someone rear-ended me at the light on Oak and 3rd. I think it was their fault but I'm not totally sure.
-
-- No police. The other driver's name is Sam Avery, I've got their number but not their insurance.
-
-- Rear bumper's crunched but it still drives.
-
-- Yeah, I can send photos.
-
-- Yes, that's right.
-
-- This number's fine, five five five one two one two.
-
-- As soon as possible.
+User: Yeah, everyone's fine. I'm pulled over on the shoulder.
+User: Jordan Reese, policy seven seven four two one zero nine.
+User: That's it.
+User: About twenty minutes ago someone rear-ended me at the light on Oak and 3rd. I think it was their fault but I'm not totally sure.
+User: No police. The other driver's name is Sam Avery, I've got their number but not their insurance.
+User: Rear bumper's crunched but it still drives.
+User: Yeah, I can send photos.
+User: Yes, that's right.
+User: This number's fine, five five five one two one two.
+User: As soon as possible.

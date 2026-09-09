@@ -43,18 +43,11 @@ Robustness path: verify_policy is active, but cap_file_claim raises (system_erro
 
 ## Turns
 
-- Everyone's fine, I'm safe.
-
-- Pat Lin, policy three oh nine eight eight one two.
-
-- Yes, that's right.
-
-- Got rear-ended on the highway an hour ago, the other driver stopped. No police.
-
-- Just my car — back bumper, still drivable. The other driver was Sam Avery.
-
-- Yeah I'll send photos.
-
-- Yes, that all sounds right.
-
-- Yes, please get me a person.
+User: Everyone's fine, I'm safe.
+User: Pat Lin, policy three oh nine eight eight one two.
+User: Yes, that's right.
+User: Got rear-ended on the highway an hour ago, the other driver stopped. No police.
+User: Just my car — back bumper, still drivable. The other driver was Sam Avery.
+User: Yeah I'll send photos.
+User: Yes, that all sounds right.
+User: Yes, please get me a person.

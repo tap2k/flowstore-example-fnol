@@ -32,10 +32,7 @@ T1 voice-sim fixture — run with --voice. The 3rd turn sets "barge_in": true: u
 
 ## Turns
 
-- I'm fine, just shaken up.
-
-- Casey Lin, policy three oh nine eight eight one two.
-
-- [barge-in] yeah yeah I know just tell me what happens next
-
-- Okay. A tree fell on the hood while it was parked.
+User: I'm fine, just shaken up.
+User: Casey Lin, policy three oh nine eight eight one two.
+User [barge-in]: yeah yeah I know just tell me what happens next
+User: Okay. A tree fell on the hood while it was parked.

@@ -38,18 +38,11 @@ Multilingual case: language es-US makes the runner compile the Spanish prompt (f
 
 ## Turns
 
-- Sí, todos estamos bien, estoy en un lugar seguro.
-
-- Casey Lin, póliza tres cero nueve ocho ocho uno dos.
-
-- Sí, correcto.
-
-- Hace una hora me chocaron por detrás en un semáforo. No vino la policía.
-
-- Solo mi carro, la defensa trasera, pero todavía se maneja. No hubo otro auto.
-
-- Sí, puedo enviar fotos.
-
-- Sí, así es.
-
-- Cinco cinco cinco uno dos uno dos, lo antes posible.
+User: Sí, todos estamos bien, estoy en un lugar seguro.
+User: Casey Lin, póliza tres cero nueve ocho ocho uno dos.
+User: Sí, correcto.
+User: Hace una hora me chocaron por detrás en un semáforo. No vino la policía.
+User: Solo mi carro, la defensa trasera, pero todavía se maneja. No hubo otro auto.
+User: Sí, puedo enviar fotos.
+User: Sí, así es.
+User: Cinco cinco cinco uno dos uno dos, lo antes posible.

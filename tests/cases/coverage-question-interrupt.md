@@ -25,12 +25,8 @@ Triggers int_policy_question: the caller asks about rental coverage during intak
 
 ## Turns
 
-- I'm fine, somewhere safe.
-
-- Casey Lin, policy three oh nine eight eight one two.
-
-- Yes. Quick question before we go on — will my insurance cover a rental while the car's in the shop?
-
-- Got it. And will this make my premium go up?
-
-- Okay, let's keep going with the claim.
+User: I'm fine, somewhere safe.
+User: Casey Lin, policy three oh nine eight eight one two.
+User: Yes. Quick question before we go on — will my insurance cover a rental while the car's in the shop?
+User: Got it. And will this make my premium go up?
+User: Okay, let's keep going with the claim.
