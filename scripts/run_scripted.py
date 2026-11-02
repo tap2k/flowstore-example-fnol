@@ -297,6 +297,7 @@ def main(argv=None):
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "agent_id": agent_dict.get("id"),
         "model": model,
+        "served_model": convo.served_model,
         "prompt_source": prompt_source,
         "voice": effective_voice,
         "voice_level": args.voice_level if effective_voice else None,

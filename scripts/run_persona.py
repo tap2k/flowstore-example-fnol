@@ -267,6 +267,7 @@ def main(argv=None):
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "agent_id": agent_dict.get("id"),
         "model": agent_model,
+        "served_model": last_convo.served_model,
         "prompt_source": prompt_source,
         "transcript": last_convo.transcript,
         "capability_calls": last_convo.capability_calls,

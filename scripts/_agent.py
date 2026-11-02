@@ -329,6 +329,7 @@ class EndpointAgent:
         self.timeout = timeout
         self.messages: list[dict[str, str]] = []
         self.ended = False
+        self.served_model: str | None = None
 
     @property
     def _headers(self) -> dict[str, str]:
@@ -344,6 +345,7 @@ class EndpointAgent:
         r = httpx.post(self.endpoint_url, json=body, headers=self._headers, timeout=self.timeout)
         r.raise_for_status()
         payload = r.json()
+        self.served_model = payload.get("model") or self.served_model
         choices = payload.get("choices") or []
         if not choices:
             return ""
@@ -600,6 +602,8 @@ class Conversation:
         )
         # Provider-native running history.
         self.contents: list = []
+        # Model id the provider reports answering (may differ from _model when it reroutes).
+        self.served_model: str | None = None
 
     # -- helpers ---------------------------------------------------------
 
@@ -732,9 +736,11 @@ class Conversation:
 
         for i in range(attempts):
             try:
-                return self._client.models.generate_content(
+                resp = self._client.models.generate_content(
                     model=self._model, contents=self.contents, config=self._config,
                 )
+                self.served_model = resp.model_version or self.served_model
+                return resp
             except errors.ServerError:
                 if i == attempts - 1:
                     raise

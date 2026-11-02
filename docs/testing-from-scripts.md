@@ -244,6 +244,7 @@ Required: `$schema`, `test_case_id`, `timestamp`, `transcript`.
 Optional:
 
 - `agent_id`, `model` — for traceability. `agent_id` comes from the compiled spec (`agent_northwind_fnol`).
+- `served_model` — the model id the provider reported answering, as reported. It can differ from `model` when the provider reroutes a retired model. Absent or `null` on targets that don't report one (runner, realtime voice).
 - `prompt_source` — `"flowstore-compile"` for runs against the compiled prompt, or the override file path when `--system-prompt` was passed (the comparison run). See [§ Comparing prompts](#comparing-prompts).
 - `capability_calls` — one per tool call the agent made. **`capability` is the stable capability id** (`cap_file_claim`), not the runtime name — so evaluators pivot on a stable identifier. Needed for `tool_calls_check`.
 - `final_variables` — for `state_check`-style evaluation. **Empty on the compiled-prompt target** (the harness doesn't track scope); a runner populates it.

@@ -272,7 +272,8 @@ def run_one_trial(
     if not err:
         for rubric in rubrics:
             evals.append(judge_one(rubric, transcript, client, judge_model, gold_text=gold_text))
-    return {"transcript": transcript, "error": err, "evaluator_results": evals, "extras": extras}
+    return {"transcript": transcript, "error": err, "evaluator_results": evals, "extras": extras,
+            "served_model": getattr(agent, "served_model", None)}
 
 
 # ---- main loop ----
@@ -336,6 +337,7 @@ for gold_path in gold_paths:
         "timestamp": now.isoformat(),
         "agent_id": agent_envelope.get("id", "unknown"),
         "model": model,
+        "served_model": trial0.get("served_model"),
         "judge_model": judge_model,
         "prompt_source": prompt_source,
         "target": args.target,

@@ -103,6 +103,7 @@ def main(argv=None):
 
     prefix_turns = dec.get("prefix_turns", []) or []
     branches_out = []
+    served_model = None
     for branch in dec.get("branches", []) or []:
         # Fresh conversation per branch so they don't bleed into each other.
         dispatcher = make_dispatcher(fixture["mocks"], name_map)
@@ -131,6 +132,7 @@ def main(argv=None):
         if cap_results:
             entry["capability_results"] = cap_results
         branches_out.append(entry)
+        served_model = convo.served_model or served_model
 
     prompt_source = args.system_prompt if args.system_prompt else "flowstore-compile"
     result = {
@@ -139,6 +141,7 @@ def main(argv=None):
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "agent_id": agent_dict.get("id"),
         "model": model,
+        "served_model": served_model,
         "prompt_source": prompt_source,
         "branches": branches_out,
     }
